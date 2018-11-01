@@ -1,11 +1,14 @@
 module DiffPrecTest
 
-using Statistics, StatsBase
+using Statistics, StatsBase, LinearAlgebra
 
 export
   DiffPrecResultBoot,
+  DiffPrecResultNormal,
   AsymmetricOracleBoot,
   SymmetricOracleBoot,
+  AsymmetricOracleNormal,
+  SymmetricOracleNormal,
   estimate
 
 # compute kron(A, B)[ind, ind]
@@ -36,12 +39,19 @@ end
 abstract type DiffPrecMethod end
 struct AsymmetricOracleBoot <: DiffPrecMethod end
 struct SymmetricOracleBoot <: DiffPrecMethod end
+struct AsymmetricOracleNormal <: DiffPrecMethod end
+struct SymmetricOracleNormal <: DiffPrecMethod end
 
 ###
 
 struct DiffPrecResultBoot
   p::Float64
   boot_p::Vector{Float64}
+end
+
+struct DiffPrecResultNormal
+  p::Float64
+  std::Float64
 end
 
 ###
@@ -67,8 +77,8 @@ function estimate(::AsymmetricOracleBoot, X, Y, indS; bootSamples::Int64=1000)
      bSx = cov(X[bX_ind, :])
      bSy = cov(Y[bY_ind, :])
 
-     kron_sub!(A, Sy, Sx, indS)
-     boot_est[b] = (A \ (Sy[indS] - Sx[indS]))[1]
+     kron_sub!(A, bSy, bSx, indS)
+     boot_est[b] = (A \ (bSy[indS] - bSx[indS]))[1]
   end
 
   DiffPrecResultBoot(Δab, boot_est)
@@ -110,14 +120,56 @@ function estimate(::SymmetricOracleBoot, X, Y, indS; bootSamples::Int64=1000)
      bSx = cov(X[bX_ind, :])
      bSy = cov(Y[bY_ind, :])
 
-     kron_sub!(A, Sy, Sx, indS)
-     kron_sub!(B, Sx, Sy, indS)
+     kron_sub!(A, bSy, bSx, indS)
+     kron_sub!(B, bSx, bSy, indS)
      @. C = (A + B) / 2.
 
-     boot_est[b] = (C \ (Sy[indS] - Sx[indS]))[1]
+     boot_est[b] = (C \ (bSy[indS] - bSx[indS]))[1]
   end
 
   DiffPrecResultBoot(Δab, boot_est)
 end
+
+function estimate(::AsymmetricOracleNormal, X, Y, indS)
+  nx, px = size(X)
+  ny, py = size(Y)
+  @assert px == py
+
+  Sx = cov(X)
+  Sy = cov(Y)
+
+  A = zeros(length(indS), length(indS))
+  kron_sub!(A, Sy, Sx, indS)
+  Δab = (A \ (Sy[indS] - Sx[indS]))[1]
+
+  DiffPrecResultNormal(Δab, 0.)
+end
+
+
+function estimate(::SymmetricOracleNormal, X, Y, indS)
+  nx, px = size(X)
+  ny, py = size(Y)
+  @assert px == py
+
+  Sx = cov(X)
+  Sy = cov(Y)
+
+  A = zeros(length(indS), length(indS))
+  B = zeros(length(indS), length(indS))
+  C = zeros(length(indS), length(indS))
+  kron_sub!(A, Sy, Sx, indS)
+  kron_sub!(B, Sx, Sy, indS)
+  @. C = (A + B) / 2.
+  Δab = (C \ (Sy[indS] - Sx[indS]))[1]
+
+  A = zeros(length(indS), length(indS))
+  B = zeros(length(indS), length(indS))
+  kron_sub!(A, Sx, Sx, indS)
+  kron_sub!(B, Sy, Sy, indS)
+
+  DiffPrecResultNormal(Δab, (inv(A) + inv(B))[1] / nx)
+end
+
+
 
 end
