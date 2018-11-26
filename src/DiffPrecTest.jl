@@ -1,6 +1,7 @@
 module DiffPrecTest
 
 using Statistics, StatsBase, LinearAlgebra
+using ProximalBase, CovSel
 
 export
   DiffPrecResultBoot,
@@ -10,6 +11,10 @@ export
   AsymmetricOracleNormal,
   SymmetricOracleNormal,
   estimate
+
+
+include("variance.jl")
+
 
 # compute kron(A, B)[ind, ind]
 function kron_sub!(out, A, B, ind)
