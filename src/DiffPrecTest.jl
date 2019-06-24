@@ -1,7 +1,7 @@
 module DiffPrecTest
 
 using Statistics, StatsBase, LinearAlgebra
-using ProximalBase, CovSel
+using ProximalBase, CoordinateDescent, CovSel
 
 export
   DiffPrecResultBoot,
@@ -10,10 +10,14 @@ export
   SymmetricOracleBoot,
   AsymmetricOracleNormal,
   SymmetricOracleNormal,
-  estimate
+  estimate,
+  
+  diffEstimation
 
 
 include("variance.jl")
+include("diffEstimation.jl")
+
 
 
 # compute kron(A, B)[ind, ind]
@@ -47,6 +51,8 @@ struct SymmetricOracleBoot <: DiffPrecMethod end
 struct AsymmetricOracleNormal <: DiffPrecMethod end
 struct SymmetricOracleNormal <: DiffPrecMethod end
 
+
+
 ###
 
 struct DiffPrecResultBoot
@@ -58,6 +64,8 @@ struct DiffPrecResultNormal
   p::Float64
   std::Float64
 end
+
+
 
 ###
 
@@ -98,17 +106,6 @@ function estimate(::SymmetricOracleBoot, X, Y, indS; bootSamples::Int64=1000)
 
   Sx = cov(X)
   Sy = cov(Y)
-
-  # _indS = copy(indS)
-  # i = LinearIndices((1:px, 1:px))[row, col]
-  # if !(i in _indS)
-  #     _indS = [i; _indS]
-  # end
-  # i = LinearIndices((1:px, 1:px))[col, row]
-  # if !(i in _indS)
-  #     _indS = [i; _indS]
-  # end
-  # j = findfirst(isequal(i), indS)
 
   A = zeros(length(indS), length(indS))
   B = zeros(length(indS), length(indS))
