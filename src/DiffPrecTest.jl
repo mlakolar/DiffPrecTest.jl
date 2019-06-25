@@ -12,11 +12,13 @@ export
   SymmetricOracleNormal,
   estimate,
 
-  diffEstimation
+  # first and second stage functions
+  diffEstimation, invHessianEstimation
 
 
 include("variance.jl")
 include("diffEstimation.jl")
+include("invHessianEstimation.jl")
 
 
 
