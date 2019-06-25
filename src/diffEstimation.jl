@@ -66,7 +66,7 @@ end
 
 
 function _computeVar!(ω, f::CDDirectDifferenceLoss, X, Y, Δ)
-    p = size(Sx, 2)
+    p = size(X, 2)
 
     for col=1:p
         for row=col:p
@@ -82,9 +82,6 @@ end
 function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOptions())
     nx, p = size(X)
     ny = size(Y, 1)
-
-    # Sx = Symmetric(X'X / nx)
-    # Sy = Symmetric(Y'Y / ny)
 
     f = CDDirectDifferenceLoss(Sx, Sy)
     x = SymmetricSparseIterate(f.p)
