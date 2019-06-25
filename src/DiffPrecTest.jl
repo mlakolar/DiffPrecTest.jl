@@ -1,6 +1,6 @@
 module DiffPrecTest
 
-using Statistics, StatsBase, LinearAlgebra
+using Statistics, LinearAlgebra
 using ProximalBase, CoordinateDescent, CovSel
 
 export
@@ -11,7 +11,7 @@ export
   AsymmetricOracleNormal,
   SymmetricOracleNormal,
   estimate,
-  
+
   diffEstimation
 
 

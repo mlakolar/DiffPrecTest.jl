@@ -36,7 +36,7 @@ function _computeVarElem(Sx, Sy, X, Y, Δ, row, col)
         tmp1 = zeros(size(Sx, 1))
         tmp2 = zeros(size(Sx, 1))
         # compute t_ab
-        t_ab = A_mul_X_mul_B_rc(Sx, Δ, Sy, row, col) + A_mul_X_mul_B_rc(Sy, Δ, Sx, row, col) - 2 * (Sy[row, col] - Sx[row, col])
+        t_ab = (A_mul_X_mul_B_rc(Sx, Δ, Sy, row, col) + A_mul_X_mul_B_rc(Sy, Δ, Sx, row, col))  - (Sy[row, col] - Sx[row, col]) * 2.
 
         # compute qk
         mul!(tmp1, Δ, view(Sy, row, :))
@@ -44,7 +44,7 @@ function _computeVarElem(Sx, Sy, X, Y, Δ, row, col)
         # eaSyΔ = view(Sy, row, :)' * Δ
         # ΔSyeb = Δ * view(Sy, :, col)
         for k=1:nx
-            q[k] = dot(tmp1, X[k, :]) * X[k, col] + dot(tmp2, X[k, :]) * X[k, row] - 2 * Sy[row, col] + 2 * X[k, row] * X[k, col]
+            q[k] = (dot(tmp1, X[k, :]) * X[k, col] + dot(tmp2, X[k, :]) * X[k, row]) - (Sy[row, col] - X[k, row] * X[k, col]) * 2.
         end
 
         # compute rk
@@ -53,13 +53,13 @@ function _computeVarElem(Sx, Sy, X, Y, Δ, row, col)
         # eaSxΔ = view(Sx, row, :)' * Δ
         # ΔSxeb = Δ * view(Sx, :, col)
         for k=1:ny
-            r[k] = dot(tmp2, Y[k, :]) * Y[k, row] + dot(tmp1, Y[k, :]) * Y[k, col]  - 2 * Y[k, row] * Y[k, col] + 2 * Sx[row, col]
+            r[k] = (dot(tmp2, Y[k, :]) * Y[k, row] + dot(tmp1, Y[k, :]) * Y[k, col])  - (Y[k, row] * Y[k, col] - Sx[row, col]) * 2.
         end
 
         σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t_ab^2
         σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t_ab^2
 
-        return σ1/nx + σ2/ny
+        return (σ1/nx + σ2/ny) / 4.
     end
 end
 
@@ -103,9 +103,9 @@ function diffEstimation(X, Y, λ, options=CDOptions())
     g = ProxL1(λ, ω)
     coordinateDescent!(x, f, g, options)
 
-    x1 = SymmetricSparseIterate(f.p)
-    g = ProxL1(λ)
-    coordinateDescent!(x1, f, g, options)
+    # x1 = SymmetricSparseIterate(f.p)
+    # g = ProxL1(λ)
+    # coordinateDescent!(x1, f, g, options)
 
     ##################
     #
@@ -127,5 +127,5 @@ function diffEstimation(X, Y, λ, options=CDOptions())
     g = ProxL1(λ, ω)
     coordinateDescent!(x, f, g, opt1)
 
-    return x, x1
+    return x
 end
