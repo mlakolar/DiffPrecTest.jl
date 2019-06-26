@@ -1,7 +1,7 @@
 
 
-function _computeVarElem(f::CDInverseSymKroneckerLoss, X, Y, Θ, row, col)
-    nx = size(X, 1)
+function _computeVarElem(f::CDInverseSymKroneckerLoss, X, Y, θ, row, col)
+    nx, p = size(X)
     ny = size(Y, 1)
 
     Sx = f.Σx
@@ -66,7 +66,7 @@ function _computeVarElem(f::CDInverseSymKroneckerLoss, X, Y, Θ, row, col)
 end
 
 function _computeVar!(ω, f::CDInverseSymKroneckerLoss, X, Y, Θ)
-    p = size(Sx, 2)
+    p = size(X, 2)
 
     for col=1:p
         for row=1:p
