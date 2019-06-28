@@ -2,6 +2,7 @@ module DiffPrecTest
 
 using Statistics, LinearAlgebra
 using ProximalBase, CoordinateDescent, CovSel
+using StatsBase
 
 export
   DiffPrecResultBoot,
@@ -166,12 +167,23 @@ function estimate(::SymmetricOracleNormal, X, Y, indS)
   @. C = (A + B) / 2.
   Δab = (C \ (Sy[indS] - Sx[indS]))[1]
 
-  A = zeros(length(indS), length(indS))
-  B = zeros(length(indS), length(indS))
-  kron_sub!(A, Sx, Sx, indS)
-  kron_sub!(B, Sy, Sy, indS)
+  varS = zeros(length(indS), length(indS))   # var(Sx) + var(Sy)
 
-  DiffPrecResultNormal(Δab, (inv(A) + inv(B))[1] / nx)
+  I = CartesianIndices(Sx)
+  for ia = 1:length(indS)
+    a = indS[ia]
+    for ib = 1:length(indS)
+      b = indS[ib]
+
+      i, j = Tuple( I[a] )
+      k, l = Tuple( I[b] )
+
+      varS[ia, ib] = (Sx[i, k] * Sx[j, l] + Sx[i, l] * Sx[j, k]) / (nx - 1) + (Sy[i, k] * Sy[j, l] + Sy[i, l] * Sy[j, k]) / (ny - 1)
+    end
+  end
+  v = ((C \ varS) / C)[1]
+
+  DiffPrecResultNormal(Δab, sqrt(v))
 end
 
 
