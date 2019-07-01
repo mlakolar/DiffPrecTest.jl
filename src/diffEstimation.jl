@@ -1,34 +1,47 @@
 
 
 
-function _computeVarElem(f::CDDirectDifferenceLoss, X, Y, Δ, row, col)
-    nx = size(X, 1)
-    ny = size(Y, 1)
+function _computeVarElem(
+    q, r,
+    f::CDDirectDifferenceLoss,
+    SxΔ, SyΔ,
+    X, Y, row, col)
+
+    nx, p = size(X)
+    ny    = size(Y, 1)
 
     Sx = f.Σx
     Sy = f.Σy
     A = f.A
 
-    q = zeros(nx)
-    r = zeros(ny)
+    fill!(q, 0.)
+    fill!(r, 0.)
 
     if row == col
         # if diagonal element
-        tmp1 = zeros(size(Sx, 1))
 
         # compute t_aa
-        t_aa = A[row, row] - (Sy[row, row] - Sx[row, row])
+        @inbounds t_aa = A[row, row] - (Sy[row, row] - Sx[row, row])
 
         # compute qk
-        mul!(tmp1, Δ, view(Sy, row, :))
         for k=1:nx
-            q[k] = dot(tmp1, X[k, :]) * X[k, col] - Sy[row, row] + X[k, row]^2
+            v = 0.
+            for l=1:p
+                @inbounds v += SyΔ[row, l] * X[k, l]
+            end
+
+            @inbounds q[k] = v * X[k, col] - Sy[row, row] + X[k, row]^2
         end
 
         # compute rk
-        mul!(tmp1, Δ, view(Sx, :, col))
         for k=1:ny
-            r[k] = dot(tmp1, Y[k, :]) * Y[k, row] - Y[k, row]^2 + Sx[row, row]
+
+            v = 0.
+            for l=1:p
+                @inbounds v += SxΔ[row, l] * Y[k, l]
+            end
+
+            @inbounds r[k] = v * Y[k, row] - Y[k, row]^2 + Sx[row, row]
         end
 
         σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t_aa^2
@@ -37,23 +50,32 @@ function _computeVarElem(f::CDDirectDifferenceLoss, X, Y, Δ, row, col)
         return σ1/nx + σ2/ny
     else
         # if off-diagonal element
-        tmp1 = zeros(size(Sx, 1))
-        tmp2 = zeros(size(Sx, 1))
+
         # compute t_ab
-        t_ab = A[row, col] + A[col, row] - (Sy[row, col] - Sx[row, col]) * 2.
+        @inbounds t_ab = A[row, col] + A[col, row] - (Sy[row, col] - Sx[row, col]) * 2.
 
         # compute qk
-        mul!(tmp1, Δ, view(Sy, row, :))
-        mul!(tmp2, Δ, view(Sy, col, :))
         for k=1:nx
-            q[k] = (dot(tmp1, X[k, :]) * X[k, col] + dot(tmp2, X[k, :]) * X[k, row]) - (Sy[row, col] - X[k, row] * X[k, col]) * 2.
+            v1 = 0.
+            v2 = 0.
+            for l=1:p
+                @inbounds v1 += SyΔ[row, l] * X[k, l]
+                @inbounds v2 += SyΔ[col, l] * X[k, l]
+            end
+
+            @inbounds q[k] = (v1 * X[k, col] + v2 * X[k, row]) - (Sy[row, col] - X[k, row] * X[k, col]) * 2.
         end
 
         # compute rk
-        mul!(tmp1, Δ, view(Sx, row, :))
-        mul!(tmp2, Δ, view(Sx, col, :))
         for k=1:ny
-            r[k] = (dot(tmp2, Y[k, :]) * Y[k, row] + dot(tmp1, Y[k, :]) * Y[k, col])  - (Y[k, row] * Y[k, col] - Sx[row, col]) * 2.
+            v1 = 0.
+            v2 = 0.
+            for l=1:p
+                @inbounds v1 += SxΔ[row, l] * Y[k, l]
+                @inbounds v2 += SxΔ[col, l] * Y[k, l]
+            end
+
+            @inbounds r[k] = (v2 * Y[k, row] + v1 * Y[k, col])  - (Y[k, row] * Y[k, col] - Sx[row, col]) * 2.
         end
 
         σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t_ab^2
@@ -65,13 +87,35 @@ end
 
 
 
+function _mul(S::Symmetric, θ::SymmetricSparseIterate)
+    p = size(S, 1)
+
+    out = zeros(p, p)
+    for ci=1:p
+        for ri=1:p
+            for k=1:p
+                @inbounds out[ri, ci] += S[ri, k] * θ[k, ci]
+            end
+        end
+    end
+    out
+end
+
+
 function _computeVar!(ω, f::CDDirectDifferenceLoss, X, Y, Δ)
-    p = size(X, 2)
+    nx, p = size(X)
+    ny    = size(Y, 1)
+
+    q = zeros(nx)
+    r = zeros(ny)
+
+    SxΔ = _mul(f.Σx, Δ)
+    SyΔ = _mul(f.Σy, Δ)
 
     for col=1:p
         for row=col:p
             linInd = sub2indLowerTriangular(p, row, col)
-            ω[linInd] = sqrt(_computeVarElem(f, X, Y, Δ, row, col))
+            ω[linInd] = sqrt(_computeVarElem(q, r, f, SxΔ, SyΔ, X, Y, row, col))
         end
     end
 

@@ -1,11 +1,14 @@
 
 
-function _computeVarElem(f::CDInverseSymKroneckerLoss, X, Y, θ, row, col)
+function _computeVarElem(
+    q, r,
+    f::CDInverseSymKroneckerLoss,
+    SxΘ, ΘSx, SyΘ, ΘSy,
+    X, Y, row, col)
+    
     nx, p = size(X)
-    ny = size(Y, 1)
+    ny    = size(Y, 1)
 
-    Sx = f.Σx
-    Sy = f.Σy
     A = f.A
     B = f.B
     a = f.a
@@ -13,49 +16,34 @@ function _computeVarElem(f::CDInverseSymKroneckerLoss, X, Y, θ, row, col)
 
     δ = row == a && col == b ? - 1. : 0.
 
-    q = zeros(nx)
-    r = zeros(ny)
-
-    tmp1 = zeros(size(Sx, 1))
-    tmp2 = zeros(size(Sx, 1))
+    fill!(q, 0.)
+    fill!(r, 0.)
 
     # compute t_ab
-    t_ab = (A[row, col] + B[row, col]) / 2. + δ
+    @inbounds t_ab = (A[row, col] + B[row, col]) / 2. + δ
 
     # compute qk
-    # tmp1 = θ[1:p, 1:p] * Sy[:, col]
-    for ci=1:p
-        for ri=1:p
-            tmp1[ri] += θ[(ci-1)*p + ri] * Sy[ci, col]
-        end
-    end
-    # tmp2 = Sy[row, :] * θ[1:p, 1:p]
-    for ci=1:p
-        for ri=1:p
-            tmp2[ri] += θ[(ci-1)*p + ri] * Sy[ci, row]
-        end
-    end
     for k=1:nx
-        q[k] = ( X[k, row] * dot(X[k, :], tmp1) + dot(tmp2, X[k, :]) * X[k, col] ) / 2. + δ
+        v1 = 0.
+        v2 = 0.
+        for l=1:p
+            @inbounds v1 += X[k, l] * ΘSy[l, col]
+            @inbounds v2 += SyΘ[row, l] * X[k, l]
+        end
+
+        @inbounds q[k] = ( X[k, row] * v1 + v2 * X[k, col] ) / 2. + δ
     end
 
     # compute rk
-    fill!(tmp1, 0.)
-    fill!(tmp2, 0.)
-    # tmp1 = θ[1:p, 1:p] * Sx[:, col]
-    for ci=1:p
-        for ri=1:p
-            tmp1[ri] += θ[(ci-1)*p + ri] * Sx[ci, col]
-        end
-    end
-    # tmp2 = Sx[row, :] * θ[1:p, 1:p]
-    for ci=1:p
-        for ri=1:p
-            tmp2[ri] += θ[(ci-1)*p + ri] * Sx[ci, row]
-        end
-    end
     for k=1:ny
-        r[k] = ( Y[k, row] * dot(Y[k, :], tmp1) + dot(tmp2, Y[k, :]) * Y[k, col] ) / 2. + δ
+        v1 = 0.
+        v2 = 0.
+        for l=1:p
+            @inbounds v1 += Y[k, l] * ΘSx[l, col]
+            @inbounds v2 += SxΘ[row, l] * Y[k, l]
+        end
+
+        @inbounds r[k] = ( Y[k, row] * v1 + v2 * Y[k, col] ) / 2. + δ
     end
 
     σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t_ab^2
@@ -65,13 +53,51 @@ function _computeVarElem(f::CDInverseSymKroneckerLoss, X, Y, θ, row, col)
 
 end
 
+
+function _mul(S::Symmetric, θ::SparseIterate)
+    p = size(S, 1)
+
+    out = zeros(p, p)
+    for ci=1:p
+        for ri=1:p
+            for k=1:p
+                @inbounds out[ri, ci] += S[ri, k] * θ[(ci-1)*p + k]
+            end
+        end
+    end
+    out
+end
+
+function _mul(θ::SparseIterate, S::Symmetric)
+    p = size(S, 1)
+
+    out = zeros(p, p)
+    for ci=1:p
+        for ri=1:p
+            for k=1:p
+                @inbounds out[ri, ci] += θ[(k-1)*p + ri] * S[k, ci]
+            end
+        end
+    end
+    out
+end
+
 function _computeVar!(ω, f::CDInverseSymKroneckerLoss, X, Y, Θ)
-    p = size(X, 2)
+    nx, p = size(X)
+    ny    = size(Y, 1)
+
+    q = zeros(nx)
+    r = zeros(ny)
+
+    SxΘ = _mul(f.Σx, Θ)
+    ΘSx = _mul(Θ, f.Σx)
+    SyΘ = _mul(f.Σy, Θ)
+    ΘSy = _mul(Θ, f.Σy)
 
     for col=1:p
         for row=1:p
             linInd = (col-1)*p + row
-            ω[linInd] = sqrt(_computeVarElem(f, X, Y, Θ, row, col))
+            ω[linInd] = sqrt(_computeVarElem(q, r, f, SxΘ, ΘSx, SyΘ, ΘSy, X, Y, row, col))
         end
     end
 
@@ -94,6 +120,7 @@ function invHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, op
     # compute initial variance
     ω = Array{eltype(Sx)}(undef, length(x))
     _computeVar!(ω, f, X, Y, x)
+    ω[(ci-1)*p + ri] = 0.
 
     # compute initial estimate
     g = ProxL1(λ, ω)
@@ -114,6 +141,7 @@ function invHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, op
         numSteps=options.numSteps)
 
     _computeVar!(ω, f, X, Y, x)
+    ω[(ci-1)*p + ri] = 0.
 
     # recompute estimate
     g = ProxL1(λ, ω)
