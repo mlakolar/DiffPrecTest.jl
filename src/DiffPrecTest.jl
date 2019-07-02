@@ -12,10 +12,12 @@ export
   AsymmetricOracleNormal,
   SymmetricOracleNormal,
   SymmetricNormal,
+  AsymmetricNormal,
+  SeparateNormal,
   estimate,
 
   # first and second stage functions
-  diffEstimation, invHessianEstimation
+  diffEstimation, invHessianEstimation, invAsymHessianEstimation
 
 
 include("variance.jl")
@@ -55,6 +57,8 @@ struct SymmetricOracleBoot <: DiffPrecMethod end
 struct AsymmetricOracleNormal <: DiffPrecMethod end
 struct SymmetricOracleNormal <: DiffPrecMethod end
 struct SymmetricNormal <: DiffPrecMethod end
+struct AsymmetricNormal <: DiffPrecMethod end
+struct SeparateNormal <: DiffPrecMethod end
 
 
 
@@ -240,7 +244,97 @@ function estimate(::SymmetricNormal, X, Y, ind)
       indS[pos], indS[1] = indS[1], indS[pos]
   end
 
-  estimate(SymmetricOracleNormal(), Sx, nx, Sy, ny, indS)
+  estimate(SymmetricOracleNormal(), Sx, nx, Sy, ny, indS), x1, x2, indS
+end
+
+
+
+
+
+
+function estimate(::AsymmetricNormal, X, Y, ind;
+    x1::Union{SymmetricSparseIterate, Nothing}=nothing)
+  nx, px = size(X)
+  ny, py = size(Y)
+  @assert px == py
+
+  Sx = Symmetric(cov(X))
+  Sy = Symmetric(cov(Y))
+
+  # first stage
+  λ = 1.01 * quantile(Normal(), 1. - 0.1 / (px * (px+1)))
+  if x1 === nothing
+      x1 = diffEstimation(Sx, Sy, X, Y, λ)
+  end
+
+  S = BitArray(undef, (px, px))
+  fill!(S, false)
+  for ci=1:px
+      for ri=ci:px
+          if abs(x1[ri, ci] > 1e-3)
+              S[ri, ci] = true
+              S[ci, ri] = true
+          end
+      end
+  end
+
+  # second stage
+  I = CartesianIndices(Sx)
+  ri, ci = Tuple( I[ind] )
+  x2 = invAsymHessianEstimation(Sx, Sy, ri, ci, X, Y, λ)
+  for ci=1:px
+      for ri=1:px
+          if abs(x2[ri + (ci-1)*px] > 1e-3)
+              S[ri, ci] = true
+              S[ci, ri] = true
+          end
+      end
+  end
+
+  # refit stage
+  indS = [LinearIndices((px, px))[x] for x in findall( S )]
+  pos = findfirst(isequal(ind), indS)
+  if  pos === nothing
+      pushfirst!(indS, ind)
+  else
+      indS[pos], indS[1] = indS[1], indS[pos]
+  end
+
+  estimate(AsymmetricOracleNormal(), Sx, nx, Sy, ny, indS), x1, x2, indS
+end
+
+
+function estimate(::SeparateNormal, X, Y, ind)
+  nx, px = size(X)
+  ny, py = size(Y)
+  @assert px == py
+
+  Sx = Symmetric(cov(X))
+  Sy = Symmetric(cov(Y))
+
+  I = CartesianIndices(Sx)
+  ri, ci = Tuple( I[ind] )
+  if ri > ci
+      ri, ci = ci, ri
+  end
+
+  lasso_x_r = lasso(X[:, 1:px .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(px) / nx))
+  lasso_x_c = lasso(X[:, 1:px .!= ci], X[:, ci], 2. * sqrt(Sx[ci, ci] * log(px) / nx))
+  lasso_y_r = lasso(Y[:, 1:px .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(px) / ny))
+  lasso_y_c = lasso(Y[:, 1:px .!= ci], Y[:, ci], 2. * sqrt(Sy[ci, ci] * log(px) / ny))
+
+  T1 = dot(lasso_x_r.residuals, lasso_x_c.residuals) / nx + lasso_x_r.σ^2. * lasso_x_c.x[ri] + lasso_x_c.σ^2. * lasso_x_r.x[ci-1]
+  T2 = dot(lasso_y_r.residuals, lasso_y_c.residuals) / ny + lasso_y_r.σ^2. * lasso_y_c.x[ri] + lasso_y_c.σ^2. * lasso_y_r.x[ci-1]
+
+  T1 = T1 / ( lasso_x_r.σ^2. * lasso_x_c.σ^2.)
+  T2 = T2 / ( lasso_y_r.σ^2. * lasso_y_c.σ^2.)
+
+  Δab = T1 - T2
+
+  v1 = (1 + lasso_x_c.x[ri]^2. * lasso_x_r.σ^2. / lasso_x_c.σ^2.) / (nx * lasso_x_r.σ^2. * lasso_x_c.σ^2.)
+  v2 = (1 + lasso_y_c.x[ri]^2. * lasso_y_r.σ^2. / lasso_y_c.σ^2.) / (ny * lasso_y_r.σ^2. * lasso_y_c.σ^2.)
+
+  DiffPrecResultNormal(Δab, sqrt(v1 + v2))
 end
 
 
