@@ -314,27 +314,43 @@ function estimate(::SeparateNormal, X, Y, ind)
 
   I = CartesianIndices(Sx)
   ri, ci = Tuple( I[ind] )
-  if ri > ci
-      ri, ci = ci, ri
+
+  if ri == ci
+      lasso_x_r = lasso(X[:, 1:px .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(px) / nx))
+      lasso_y_r = lasso(Y[:, 1:px .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(px) / ny))
+
+      T1 = 1. / lasso_x_r.σ^2.
+      T2 = 1. / lasso_y_r.σ^2.
+
+      Δab = T1 - T2
+
+      v1 = 2. / (nx * lasso_x_r.σ^4.)
+      v2 = 2. / (ny * lasso_y_r.σ^4.)
+
+      return DiffPrecResultNormal(Δab, sqrt(v1 + v2))
+  else
+      if ri > ci
+          ri, ci = ci, ri
+      end
+
+      lasso_x_r = lasso(X[:, 1:px .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(px) / nx))
+      lasso_x_c = lasso(X[:, 1:px .!= ci], X[:, ci], 2. * sqrt(Sx[ci, ci] * log(px) / nx))
+      lasso_y_r = lasso(Y[:, 1:px .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(px) / ny))
+      lasso_y_c = lasso(Y[:, 1:px .!= ci], Y[:, ci], 2. * sqrt(Sy[ci, ci] * log(px) / ny))
+
+      T1 = dot(lasso_x_r.residuals, lasso_x_c.residuals) / nx + lasso_x_r.σ^2. * lasso_x_c.x[ri] + lasso_x_c.σ^2. * lasso_x_r.x[ci-1]
+      T2 = dot(lasso_y_r.residuals, lasso_y_c.residuals) / ny + lasso_y_r.σ^2. * lasso_y_c.x[ri] + lasso_y_c.σ^2. * lasso_y_r.x[ci-1]
+
+      T1 = T1 / ( lasso_x_r.σ^2. * lasso_x_c.σ^2.)
+      T2 = T2 / ( lasso_y_r.σ^2. * lasso_y_c.σ^2.)
+
+      Δab = T2 - T1
+
+      v1 = (1. + lasso_x_c.x[ri]^2. * lasso_x_r.σ^2. / lasso_x_c.σ^2.) / (nx * lasso_x_r.σ^2. * lasso_x_c.σ^2.)
+      v2 = (1. + lasso_y_c.x[ri]^2. * lasso_y_r.σ^2. / lasso_y_c.σ^2.) / (ny * lasso_y_r.σ^2. * lasso_y_c.σ^2.)
+
+      return DiffPrecResultNormal(Δab, sqrt(v1 + v2))
   end
-
-  lasso_x_r = lasso(X[:, 1:px .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(px) / nx))
-  lasso_x_c = lasso(X[:, 1:px .!= ci], X[:, ci], 2. * sqrt(Sx[ci, ci] * log(px) / nx))
-  lasso_y_r = lasso(Y[:, 1:px .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(px) / ny))
-  lasso_y_c = lasso(Y[:, 1:px .!= ci], Y[:, ci], 2. * sqrt(Sy[ci, ci] * log(px) / ny))
-
-  T1 = dot(lasso_x_r.residuals, lasso_x_c.residuals) / nx + lasso_x_r.σ^2. * lasso_x_c.x[ri] + lasso_x_c.σ^2. * lasso_x_r.x[ci-1]
-  T2 = dot(lasso_y_r.residuals, lasso_y_c.residuals) / ny + lasso_y_r.σ^2. * lasso_y_c.x[ri] + lasso_y_c.σ^2. * lasso_y_r.x[ci-1]
-
-  T1 = T1 / ( lasso_x_r.σ^2. * lasso_x_c.σ^2.)
-  T2 = T2 / ( lasso_y_r.σ^2. * lasso_y_c.σ^2.)
-
-  Δab = T1 - T2
-
-  v1 = (1 + lasso_x_c.x[ri]^2. * lasso_x_r.σ^2. / lasso_x_c.σ^2.) / (nx * lasso_x_r.σ^2. * lasso_x_c.σ^2.)
-  v2 = (1 + lasso_y_c.x[ri]^2. * lasso_y_r.σ^2. / lasso_y_c.σ^2.) / (ny * lasso_y_r.σ^2. * lasso_y_c.σ^2.)
-
-  DiffPrecResultNormal(Δab, sqrt(v1 + v2))
 end
 
 
