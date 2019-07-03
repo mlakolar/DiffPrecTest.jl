@@ -8,7 +8,7 @@ using JLD
 pArr = [100, 200]
 elemArr = [(5,5), (8, 7), (50, 25)]
 n = 300
-est      = Array{DiffPrecResultNormal}(undef, 2)   # number of methods
+est      = Array{DiffPrecResultNormal}(undef, 3)   # number of methods
 
 
 rep   = parse(Int,ARGS[1])
@@ -48,8 +48,9 @@ Y = rand(dist_Y, n)'
 ri, ci = elemArr[iElem]
 indE = (ci - 1) * p + ri
 
-@time est[1], _, _, _ = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
+@time est[1], _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
 @time est[2] = DiffPrecTest.estimate(SeparateNormal(), X, Y, indE)
+@time est[3] = DiffPrecTest.estimate(SymmetricOracleBoot(), X, Y, indS)
 
 
 @save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est
