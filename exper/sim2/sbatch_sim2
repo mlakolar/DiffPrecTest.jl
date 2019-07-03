@@ -11,4 +11,4 @@
 
 
 
-parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=/scratch/mkolar/output/$SLURM_JOB_NAME.err.{1} --output=/scratch/mkolar/output/$SLURM_JOB_NAME.out.{1} /home/mkolar/mkolar_space/julia-1.1.1/bin/julia sim2.jl {1} ${1} ${2} /scratch/mkolar/output/diffTest/sim2 ::: {1..1000}
+parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=/scratch/mkolar/output/$SLURM_JOB_NAME.err.{1} --output=/scratch/mkolar/output/$SLURM_JOB_NAME.out.{1} /home/mkolar/mkolar_space/julia-1.1.1/bin/julia sim2.jl {1} ${1} ${2} /scratch/mkolar/diffTest/sim2 ::: {1..1000}
