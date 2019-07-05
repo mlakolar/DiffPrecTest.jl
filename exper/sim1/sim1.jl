@@ -8,7 +8,7 @@ using JLD
 pArr = [100, 200]
 elemArr = [(5,5), (8, 7), (50, 25)]
 n = 300
-est      = Array{DiffPrecResultNormal}(undef, 3)   # number of methods
+est      = Array{Any}(undef, 3)   # number of methods
 
 
 rep   = parse(Int,ARGS[1])
