@@ -3,7 +3,7 @@ using DiffPrecTest
 
 for ip=1:2
   for iElem=1:5
-    res = load("../sim3_res_$(ip)_$(iElem).jld", "results")
+    res = load("../sim4_res_$(ip)_$(iElem).jld", "results")
 
     @show ip, iElem
     for j in 1:5

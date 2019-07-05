@@ -20,13 +20,12 @@ Random.seed!(1234)
 
 # generate model
 Ωx = Matrix{Float64}(I, p, p)
-for l=1:p-1
-    Ωx[l  , l+1] = 0.6
-    Ωx[l+1, l  ] = 0.6
-end
-for l=1:p-2
-    Ωx[l  , l+2] = 0.3
-    Ωx[l+2, l  ] = 0.3
+ρ = 0.7
+for k=1:p-1
+    for l=1:p-k
+        Ωx[l  , l+k] = ρ^k
+        Ωx[l+k, l  ] = ρ^k
+    end
 end
 Δ = zeros(p, p)
 # generate Delta
