@@ -8,7 +8,7 @@ using JLD
 pArr = [100, 200]
 elemArr = [(5,5), (8, 7), (50, 25)]
 n = 300
-est      = Array{Any}(undef, 3)   # number of methods
+est      = Array{Any}(undef, 5)   # number of methods
 
 
 rep   = parse(Int,ARGS[1])
@@ -21,7 +21,7 @@ Random.seed!(134)
 p = pArr[ip]
 # generate model
 Ω = Matrix{Float64}(I, p, p)
-ρ = 0.7
+ρ = 0.9
 for k=1:p-1
     for l=1:p-k
         Ω[l  , l+k] = ρ^k
@@ -47,9 +47,13 @@ Y = rand(dist_Y, n)'
 ri, ci = elemArr[iElem]
 indE = (ci - 1) * p + ri
 
+indOracle = [indE]
+
 @time est[1], _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
 @time est[2] = DiffPrecTest.estimate(SeparateNormal(), X, Y, indE)
 @time est[3] = DiffPrecTest.estimate(SymmetricOracleBoot(), X, Y, indS)
+@time est[4] = DiffPrecTest.estimate(SymmetricOracleNormal(), Symmetric(cov(X)), n, Symmetric(cov(Y)), n, indOracle)
+@time est[5] = DiffPrecTest.estimate(SymmetricOracleBoot(), X, Y, indOracle)
 
 
 @save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est

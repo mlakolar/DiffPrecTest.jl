@@ -119,6 +119,8 @@ function invHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, op
 
     f = CDInverseSymKroneckerLoss(Sx, Sy, ri, ci)
     x = SparseIterate(p*p)
+    x[(ci-1)*p + ri] = 1.
+    CoordinateDescent.initialize!(f, x)
 
     ##################
     #
@@ -157,6 +159,72 @@ function invHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, op
 
     return x
 end
+
+# function _computeVarAltH!(ω, Sx, nx, Sy, ny, a, b)
+#     p = size(Sx, 2)
+#
+#     for col=1:p
+#         for row=1:p
+#             linInd = (col-1)*p + row
+#
+#             vxca = (Sx[row, row] * Sx[a, a] + Sx[row, a] * Sx[a, row]) / (nx - 1)
+#             vydb = (Sy[col, col] * Sy[b, b] + Sy[col, b] * Sy[b, col]) / (ny - 1)
+#
+#             vyca = (Sy[row, row] * Sy[a, a] + Sy[row, a] * Sy[a, row]) / (ny - 1)
+#             vxdb = (Sx[col, col] * Sx[b, b] + Sx[col, b] * Sx[b, col]) / (nx - 1)
+#
+#             ω[linInd] = sqrt( 2. * (vxca*vydb + vyca*vxdb) )
+#         end
+#     end
+#
+# end
+
+
+# function invHessianEstimationAlt1(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, options=CDOptions())
+#     nx, p = size(X)
+#     ny = size(Y, 1)
+#
+#     f = CDInverseSymKroneckerLoss(Sx, Sy, ri, ci)
+#     x = SparseIterate(p*p)
+#     x[(ci-1)*p + ri] = 1.
+#     CoordinateDescent.initialize!(f, x)
+#
+#     ##################
+#     #
+#     #  first stage
+#     #
+#     ##################
+#     # compute initial variance
+#     ω = Array{eltype(Sx)}(undef, length(x))
+#     _computeVar!(ω, f, X, Y, x)
+#     ω[(ci-1)*p + ri] = 0.
+#     @show ω
+#
+#     # compute initial estimate
+#     g = ProxL1(λ, ω)
+#     coordinateDescent!(x, f, g, options)
+#
+#     return x
+# end
+#
+# function invHessianEstimationAlt(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, options=CDOptions())
+#     nx, p = size(X)
+#     ny = size(Y, 1)
+#
+#     f = CDInverseSymKroneckerLoss(Sx, Sy, ri, ci)
+#     x = SparseIterate(p*p)
+#
+#     ω = Array{eltype(Sx)}(undef, length(x))
+#     _computeVarAltH!(ω, Sx, nx, Sy, ny, ri, ci)
+#     ω[(ci-1)*p + ri] = 0.
+#     @show ω
+#
+#     g = ProxL1(λ, ω)
+#     coordinateDescent!(x, f, g, options)
+#
+#     return x
+# end
+
 
 
 ############################################
@@ -238,6 +306,9 @@ function invAsymHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ
 
     f = CDInverseKroneckerLoss(Sx, Sy, ri, ci)
     x = SparseIterate(p*p)
+    x[(ci-1)*p + ri] = 1.
+    CoordinateDescent.initialize!(f, x)
+
 
     ##################
     #

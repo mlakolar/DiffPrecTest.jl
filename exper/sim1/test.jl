@@ -11,10 +11,14 @@ n = 300
 est      = Array{Any}(undef, 5)   # number of methods
 
 
-rep   = parse(Int,ARGS[1])
-ip    = parse(Int,ARGS[2])
-iElem = parse(Int,ARGS[3])
-dir = ARGS[4]
+# rep   = parse(Int,ARGS[1])
+# ip    = parse(Int,ARGS[2])
+# iElem = parse(Int,ARGS[3])
+# dir = ARGS[4]
+
+rep = 1
+ip = 1
+iElem = 1
 
 Random.seed!(134)
 
@@ -49,13 +53,12 @@ ri, ci = elemArr[iElem]
 indE = (ci - 1) * p + ri
 indOracle = [indE]
 
-
 @time est[1], _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
+@show indS
 @time est[2] = DiffPrecTest.estimate(SeparateNormal(), X, Y, indE)
 @time est[3] = DiffPrecTest.estimate(SymmetricOracleBoot(), X, Y, indS)
 @time est[4] = DiffPrecTest.estimate(SymmetricOracleNormal(), Symmetric(cov(X)), n, Symmetric(cov(Y)), n, indOracle)
 @time est[5] = DiffPrecTest.estimate(SymmetricOracleBoot(), X, Y, indOracle)
 
 
-
-@save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est
+# @save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est
