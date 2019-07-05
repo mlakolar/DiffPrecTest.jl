@@ -399,7 +399,7 @@ function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Flo
   z2 = 1. - α / 2.
 
   for rep=1:num_rep
-    lb, ub = quantile!([rep].boot_p, [z1, z2])
+    lb, ub = quantile!(res[rep].boot_p, [z1, z2])
     if lb < trueParam && ub > trueParam
       coverage += 1
     end
