@@ -7,6 +7,7 @@ using StatsBase, Distributions
 export
   DiffPrecResultBoot,
   DiffPrecResultNormal,
+  SimulationResult,
   AsymmetricOracleBoot,
   SymmetricOracleBoot,
   AsymmetricOracleNormal,
@@ -15,6 +16,7 @@ export
   AsymmetricNormal,
   SeparateNormal,
   estimate,
+  computeSimulationResult,
 
   # first and second stage functions
   diffEstimation, invHessianEstimation, invAsymHessianEstimation
@@ -74,7 +76,11 @@ struct DiffPrecResultNormal
   std::Float64
 end
 
-
+struct SimulationResult
+  bias::Float64
+  coverage::Float64
+  lenCoverage::Float64
+end
 
 ###
 
@@ -352,6 +358,60 @@ function estimate(::SeparateNormal, X, Y, ind)
       return DiffPrecResultNormal(Δab, sqrt(v1 + v2))
   end
 end
+
+struct SimulationResults
+  bias::Float64
+  coverage::Float64
+  lenCoverage::Float64
+end
+
+
+function computeSimulationResult(res::Vector{DiffPrecResultNormal}, trueParam::Float64, α::Float64=0.05)
+  Eestim = 0.
+  bias = 0.
+  coverage = 0
+  lenCoverage = 0.
+
+  num_rep = length(res)
+  zα = quantile(Normal(), 1. - α / 2.)
+
+  for rep=1:num_rep
+    if res[rep].p - zα * res[rep].std < trueParam && res[rep].p + zα * res[rep].std > trueParam
+      coverage += 1
+    end
+    lenCoverage += 2. * zα * res[rep].std
+    Eestim += res[rep].p
+  end
+
+  bias = Eestim / num_rep - trueParam
+
+  SimulationResults(bias, coverage / num_rep, lenCoverage / num_rep)
+end
+
+function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Float64, α::Float64=0.05)
+  Eestim = 0.
+  bias = 0.
+  coverage = 0
+  lenCoverage = 0.
+
+  num_rep = length(res)
+  z1 = α / 2.
+  z2 = 1. - α / 2.
+
+  for rep=1:num_rep
+    lb, ub = quantile!([rep].boot_p, [z1, z2])
+    if lb < trueParam && ub > trueParam
+      coverage += 1
+    end
+    lenCoverage += (ub - lb)
+    Eestim += res[rep].p
+  end
+
+  bias = Eestim / num_rep - trueParam
+
+  SimulationResults(bias, coverage / num_rep, lenCoverage / num_rep)
+end
+
 
 
 end
