@@ -46,7 +46,6 @@ d .= sqrt.(d)
 D = Diagonal(d)
 Σx = inv(Symmetric(D * Ωx * D))
 Σy = inv(Symmetric(D * Ωy * D))
-eigvals(Σy)
 
 tΔ = D * Δ * D
 
@@ -62,8 +61,7 @@ Y = rand(dist_Y, n)'
 
 ri, ci = elemArr[iElem]
 indE = (ci - 1) * p + ri
-indOracle = [indE]
-
+indOracle =  LinearIndices(tΔ)[findall(!iszero, tΔ)]
 
 @time est[1], _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
 @time est[2] = DiffPrecTest.estimate(SeparateNormal(), X, Y, indE)

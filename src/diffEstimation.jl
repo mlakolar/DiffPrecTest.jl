@@ -122,18 +122,6 @@ function _computeVar!(ω, f::CDDirectDifferenceLoss, X, Y, Δ)
 end
 
 
-# function _computeVarAlt!(ω, Sx, nx, Sy, ny)
-#     p = size(Sx, 2)
-#
-#     for col=1:p
-#         for row=col:p
-#             linInd = sub2indLowerTriangular(p, row, col)
-#             v = (Sx[row, row] * Sx[col, col] + Sx[row, col] * Sx[col, row]) / (nx - 1) + (Sy[row, row] * Sy[col, col] + Sy[row, col] * Sy[col, row]) / (ny - 1)
-#             ω[linInd] = sqrt(v)
-#         end
-#     end
-# end
-
 
 # our method
 function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOptions())
@@ -179,48 +167,3 @@ function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOption
 
     return x
 end
-
-
-# function diffEstimationAlt1(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOptions())
-#     nx, p = size(X)
-#     ny = size(Y, 1)
-#
-#     f = CDDirectDifferenceLoss(Sx, Sy)
-#     x = SymmetricSparseIterate(f.p)
-#
-#
-#     ##################
-#     #
-#     #  first stage
-#     #
-#     ##################
-#     # compute initial variance
-#     ω = Array{eltype(Sx)}(undef, length(x))
-#     _computeVar!(ω, f, X, Y, x)
-#     @show ω
-#
-#     # compute initial estimate
-#     g = ProxL1(λ, ω)
-#     coordinateDescent!(x, f, g, options)
-#
-#     return x
-# end
-#
-#
-# function diffEstimationAlt(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOptions())
-#     nx, p = size(X)
-#     ny = size(Y, 1)
-#
-#     f = CDDirectDifferenceLoss(Sx, Sy)
-#     x = SymmetricSparseIterate(f.p)
-#
-#     ω = Array{eltype(Sx)}(undef, length(x))
-#     _computeVarAlt!(ω, Sx, nx, Sy, ny)
-#
-#     @show ω
-#
-#     g = ProxL1(λ, ω)
-#     coordinateDescent!(x, f, g, options)
-#
-#     return x
-# end

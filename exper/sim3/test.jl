@@ -10,10 +10,10 @@ elemArr = [(5,5), (8, 7), (50, 25), (21, 20), (30, 30)]
 n = 300
 est      = Array{Any}(undef, 5)   # number of methods
 
-rep   = parse(Int,ARGS[1])
-ip    = parse(Int,ARGS[2])
-iElem = parse(Int,ARGS[3])
-dir = ARGS[4]
+
+rep = 1
+ip = 1
+iElem = 1
 
 p = pArr[ip]
 Random.seed!(1234)
@@ -64,6 +64,7 @@ ri, ci = elemArr[iElem]
 indE = (ci - 1) * p + ri
 
 indOracle =  LinearIndices(tΔ)[findall(!iszero, tΔ)]
+@show indOracle
 
 @time est[1], _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
 @time est[2] = DiffPrecTest.estimate(SeparateNormal(), X, Y, indE)
@@ -73,4 +74,3 @@ indOracle =  LinearIndices(tΔ)[findall(!iszero, tΔ)]
 
 
 
-@save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est

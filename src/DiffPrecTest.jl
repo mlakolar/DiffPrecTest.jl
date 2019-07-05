@@ -359,12 +359,6 @@ function estimate(::SeparateNormal, X, Y, ind)
   end
 end
 
-struct SimulationResults
-  bias::Float64
-  coverage::Float64
-  lenCoverage::Float64
-end
-
 
 function computeSimulationResult(res::Vector{DiffPrecResultNormal}, trueParam::Float64, α::Float64=0.05)
   Eestim = 0.
