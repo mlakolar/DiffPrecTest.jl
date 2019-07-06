@@ -379,7 +379,7 @@ function computeSimulationResult(res::Vector{DiffPrecResultNormal}, trueParam::F
 
   bias = Eestim / num_rep - trueParam
 
-  SimulationResults(bias, coverage / num_rep, lenCoverage / num_rep)
+  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep)
 end
 
 function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Float64, α::Float64=0.05)
@@ -403,7 +403,7 @@ function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Flo
 
   bias = Eestim / num_rep - trueParam
 
-  SimulationResults(bias, coverage / num_rep, lenCoverage / num_rep)
+  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep)
 end
 
 
