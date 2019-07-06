@@ -5,7 +5,7 @@ using ProximalBase, CoordinateDescent, CovSel
 using Random, Distributions
 using JLD
 
-pArr = [100, 200]
+pArr = [100, 200, 500]
 elemArr = [(5,5), (8, 7), (50, 25)]
 n = 300
 est      = Array{Any}(undef, 5)   # number of methods

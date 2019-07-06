@@ -5,7 +5,7 @@
 
 #SBATCH --ntasks=28
 ##SBATCH --job-name=diff_sim1
-#SBATCH --partition=standard
+#SBATCH --partition=gpu
 #SBATCH --time=6-12:00:00
 #SBATCH --exclusive
 

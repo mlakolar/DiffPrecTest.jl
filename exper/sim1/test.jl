@@ -5,9 +5,9 @@ using ProximalBase, CoordinateDescent, CovSel
 using Random, Distributions
 using JLD
 
-pArr = [100, 200]
+pArr = [100, 200, 500, 300]
 elemArr = [(5,5), (8, 7), (50, 25)]
-n = 300
+n = 100
 est      = Array{Any}(undef, 5)   # number of methods
 
 
@@ -17,7 +17,7 @@ est      = Array{Any}(undef, 5)   # number of methods
 # dir = ARGS[4]
 
 rep = 1
-ip = 1
+ip = 2
 iElem = 1
 
 Random.seed!(134)
