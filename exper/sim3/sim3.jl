@@ -64,13 +64,13 @@ ri, ci = elemArr[iElem]
 indE = (ci - 1) * p + ri
 
 indOracle =  LinearIndices(tΔ)[findall(!iszero, tΔ)]
+pos = findfirst(isequal(indE), indOracle)
+indOracle[pos], indOracle[1] = indOracle[1], indOracle[pos]
 
 @time est[1], _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
 @time est[2] = DiffPrecTest.estimate(SeparateNormal(), X, Y, indE)
 @time est[3] = DiffPrecTest.estimate(SymmetricOracleBoot(), X, Y, indS)
 @time est[4] = DiffPrecTest.estimate(SymmetricOracleNormal(), Symmetric(cov(X)), n, Symmetric(cov(Y)), n, indOracle)
 @time est[5] = DiffPrecTest.estimate(SymmetricOracleBoot(), X, Y, indOracle)
-
-
 
 @save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est
