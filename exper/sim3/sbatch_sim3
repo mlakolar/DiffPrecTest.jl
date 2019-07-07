@@ -6,9 +6,10 @@
 #SBATCH --ntasks=28
 ##SBATCH --job-name=diff_sim1
 #SBATCH --partition=standard
-#SBATCH --time=6-12:00:00
+#SBATCH --time=7-00:00:00
 #SBATCH --exclusive
 
+mkdir -p /scratch/mkolar/diffTest/sim3
+mkdir -p /scratch/mkolar/output/sim3
 
-
-parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=/scratch/mkolar/output/$SLURM_JOB_NAME.err.{1} --output=/scratch/mkolar/output/$SLURM_JOB_NAME.out.{1} /home/mkolar/mkolar_space/julia-1.1.1/bin/julia sim3.jl {1} ${1} ${2} /scratch/mkolar/diffTest/sim3 ::: {1..1000}
+parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=/scratch/mkolar/output/sim3/$SLURM_JOB_NAME.err.{1} --output=/scratch/mkolar/output/sim3/$SLURM_JOB_NAME.out.{1} /home/mkolar/mkolar_space/julia-1.1.1/bin/julia sim3.jl {1} ${1} ${2} /scratch/mkolar/diffTest/sim3 ::: {1..1000}

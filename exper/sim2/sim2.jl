@@ -5,6 +5,9 @@ using ProximalBase, CoordinateDescent, CovSel
 using Random, Distributions
 using JLD
 
+
+@show gethostname() 
+
 pArr = [100, 200, 500]
 elemArr = [(5,5), (8, 7), (50, 25)]
 n = 300

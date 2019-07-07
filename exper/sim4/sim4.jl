@@ -5,7 +5,10 @@ using ProximalBase, CoordinateDescent, CovSel
 using Random, Distributions
 using JLD
 
-pArr = [100, 200]
+
+@show gethostname() 
+
+pArr = [100, 200, 500]
 elemArr = [(5,5), (8, 7), (50, 25), (21, 20), (30, 30)]
 n = 300
 est      = Array{Any}(undef, 5)   # number of methods
@@ -62,6 +65,12 @@ Y = rand(dist_Y, n)'
 ri, ci = elemArr[iElem]
 indE = (ci - 1) * p + ri
 indOracle =  LinearIndices(tΔ)[findall(!iszero, tΔ)]
+pos = findfirst(isequal(indE), indOracle)
+if pos === nothing
+  pushfirst!(indOracle, indE)
+else
+  indOracle[pos], indOracle[1] = indOracle[1], indOracle[pos]
+end
 
 @time est[1], _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, indE)
 @time est[2] = DiffPrecTest.estimate(SeparateNormal(), X, Y, indE)

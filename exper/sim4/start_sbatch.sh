@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for ip in "1" "2"
+for ip in "1" "2" "3"
 do
   for iElem in "1" "2" "3" "4" "5"
   do
