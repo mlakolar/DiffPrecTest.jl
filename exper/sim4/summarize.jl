@@ -1,9 +1,14 @@
 using JLD
 using DiffPrecTest
-
+using DataFrames, CSV
+using Random, LinearAlgebra, Distributions
 
 pArr = [100, 200]
 elemArr = [(5,5), (8, 7), (50, 25), (21, 20), (30, 30)]
+methodArr = ["Our-N", "YinXia", "Our-B", "Oracle-N", "Oracle-B"]
+
+df = DataFrame(p = Int[], row = Int[], col = Int[], trueValue=Float64[], method=String[], bias=Float64[], coverage=Float64[], lenCI=Float64[])
+
 
 for ip=1:2
   for iElem=1:5
@@ -43,9 +48,14 @@ for ip=1:2
 
     res = load("../sim4_res_$(ip)_$(iElem).jld", "results")
 
-    @show ip, iElem
+    ri, ci = elemArr[iElem]
+    indE = (ci - 1) * p + ri
+
     for j in 1:5
-      @show computeSimulationResult([res[j, i] for i=1:1000], tΔ[indE])
+      sr = computeSimulationResult([res[j, i] for i=1:1000], tΔ[indE])
+      push!(df, [pArr[ip], elemArr[iElem][1], elemArr[iElem][2], tΔ[indE], methodArr[j], sr.bias, sr.coverage, sr.lenCoverage])
     end
   end
 end
+
+CSV.write("sim4.csv", df)
