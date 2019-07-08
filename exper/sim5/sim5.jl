@@ -69,4 +69,4 @@ minλ = maxλ * 0.04
 
 eΔDTr, i2, iInf, loss2arr, lossInfarr = supportEstimate(DTraceValidationSupport(), Sx, Sy, Sxtest, Sytest, Λarr)
 
-@save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" eΔNormal, eΔBoot, eS, eΔDTr, i2, iInf, loss2arr, lossInfarr
+@save "$(dir)/res_$(rep).jld" eΔNormal eΔBoot eS eΔDTr i2 iInf loss2arr lossInfarr
