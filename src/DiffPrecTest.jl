@@ -19,7 +19,14 @@ export
   computeSimulationResult,
 
   # first and second stage functions
-  diffEstimation, invHessianEstimation, invAsymHessianEstimation
+  diffEstimation, invHessianEstimation, invAsymHessianEstimation,
+
+  # support estimation
+  ANTSupport,
+  BootStdSupport,
+  BootMaxSupport,
+  supportEstimate
+
 
 
 ####################################
@@ -37,6 +44,11 @@ struct SymmetricNormal <: DiffPrecMethod end
 struct AsymmetricNormal <: DiffPrecMethod end
 struct SeparateNormal <: DiffPrecMethod end
 
+
+abstract type DiffPrecSupport end
+struct ANTSupport <: DiffPrecSupport end
+struct BootStdSupport <: DiffPrecSupport end
+struct BootMaxSupport <: DiffPrecSupport end
 
 ####################################
 #
@@ -110,7 +122,7 @@ function estimate(::SymmetricNormal, X, Y, ind)
               S[ri, ci] = true
               S[ci, ri] = true
               S[ri, ri] = true
-              S[ci, ci] = true              
+              S[ci, ci] = true
           end
       end
   end
@@ -343,5 +355,158 @@ function estimate(
   DiffPrecResultNormal(Δab, sqrt(v))
 end
 
+
+
+####################################
+#
+#   support estimator
+#
+####################################
+
+function __initSupport(
+    Sx::Symmetric, Sy::Symmetric, X, Y)
+    nx, px = size(X)
+    ny, py = size(Y)
+
+    estimSupp = Array{BitArray}(undef, div((px + 1)*px, 2))
+
+    # first stage
+    λ = 1.01 * quantile(Normal(), 1. - 0.1 / (px * (px+1)))
+    x1 = diffEstimation(Sx, Sy, X, Y, λ)
+
+    S1 = BitArray(undef, (px, px))
+    fill!(S1, false)
+    for ci=1:px
+        for ri=ci:px
+            if abs(x1[ri, ci] > 1e-3)
+                S1[ri, ci] = true
+                S1[ci, ri] = true
+                S1[ri, ri] = true
+                S1[ci, ci] = true
+            end
+        end
+    end
+
+    # second stage
+    ind = 0
+    for ci=1:px
+        for ri=ci:px
+            x2 = invHessianEstimation(Sx, Sy, ri, ci, X, Y, λ)
+            ind = ind + 1
+            estimSupp[ind] = copy(S1)
+
+            for _ci=1:px
+                for _ri=1:px
+                    if abs(x2[_ri + (_ci-1)*px] > 1e-3)
+                        estimSupp[ind][_ri, _ci] = true
+                        estimSupp[ind][_ci, _ri] = true
+                        estimSupp[ind][_ri, _ri] = true
+                        estimSupp[ind][_ci, _ci] = true
+                    end
+                end
+            end
+        end
+    end
+
+    estimSupp
+end
+
+function supportEstimate(::ANTSupport, X, Y; estimSupport::Union{Array{BitArray},Nothing}=nothing)
+    nx, p = size(X)
+    ny    = size(Y, 1)
+
+    Sx = Symmetric( cov(X) )
+    Sy = Symmetric( cov(Y) )
+
+    eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
+    out = Array{DiffPrecResultNormal}(undef, div((p+1)*p, 2))
+
+    it = 0
+    for col=1:p
+        for row=col:p
+            it = it + 1
+            ind = (col - 1) * p + row
+
+            indS = [LinearIndices((p, p))[x] for x in findall( eS[it] )]
+            pos = findfirst(isequal(ind), indS)
+            if  pos === nothing
+                pushfirst!(indS, ind)
+            else
+                indS[pos], indS[1] = indS[1], indS[pos]
+            end
+
+            out[it] = estimate(SymmetricOracleNormal(), Sx, nx, Sy, ny, indS)
+        end
+    end
+
+    Δ = zeros(Float64, p, p)
+    n = min(nx, ny)
+    it = 0
+    τ0 = 2. * sqrt(log(p))
+    for col=1:p
+        for row=col:p
+            it = it + 1
+            τ = τ0 * out[it].std
+            v = abs(out[it].p) > τ ? out[it].p : 0.
+            if row == col
+                Δ[row, row] = v
+            else
+                Δ[row, col] = v
+                Δ[col, row] = v
+            end
+        end
+    end
+
+    Δ, out, eS
+end
+
+function supportEstimate(::BootStdSupport, X, Y; estimSupport::Union{Array{BitArray},Nothing}=nothing)
+    nx, p = size(X)
+    ny    = size(Y, 1)
+
+    Sx = Symmetric( cov(X) )
+    Sy = Symmetric( cov(Y) )
+
+    eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
+    out = Array{DiffPrecResultBoot}(undef, div((p+1)*p, 2))
+
+    it = 0
+    for col=1:p
+        for row=col:p
+            it = it + 1
+            ind = (col - 1) * p + row
+
+            indS = [LinearIndices((p, p))[x] for x in findall( eS[it] )]
+            pos = findfirst(isequal(ind), indS)
+            if  pos === nothing
+                pushfirst!(indS, ind)
+            else
+                indS[pos], indS[1] = indS[1], indS[pos]
+            end
+
+            out[it] = estimate(SymmetricOracleBoot(), X, Y, indS)
+        end
+    end
+
+    Δ = zeros(Float64, p, p)
+    n = min(nx, ny)
+    it = 0
+    τ0 = 2. * sqrt(log(p))
+    for col=1:p
+        for row=col:p
+            it = it + 1
+            τ = τ0 * std( out[it].boot_p )
+            v = abs(out[it].p) > τ ? out[it].p : 0.
+            if row == col
+                Δ[row, row] = v
+            else
+                Δ[row, col] = v
+                Δ[col, row] = v
+            end
+        end
+    end
+
+    Δ, out, eS
+end
 
 end
