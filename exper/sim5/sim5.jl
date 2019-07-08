@@ -33,7 +33,6 @@ end
 
 Σx = inv(Symmetric(Ωx))
 Σy = inv(Symmetric(Ωy))
-eigvals(Σy)
 
 dist_X = MvNormal(convert(Matrix, Σx))
 dist_Y = MvNormal(convert(Matrix, Σy))
