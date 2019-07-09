@@ -338,6 +338,12 @@ function estimate(
   DiffPrecResultNormal(Δab, sqrt(v))
 end
 
+
+
+
+function variance(::SymmetricOracleNormal, Sx, Sy, X, Y, Δab)
+end
+
 function estimate(
     ::SymmetricOracleNormal,
     Sx::Symmetric, nx::Int,
@@ -351,6 +357,8 @@ function estimate(
   kron_sub!(B, Sx, Sy, indS)
   @. C = (A + B) / 2.
   Δab = (C \ (Sy[indS] - Sx[indS]))[1]
+
+
   varS  = _varSxSy(Sx, nx, Sy, ny, indS)
   v = ((C \ varS) / C)[1]
 
