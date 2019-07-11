@@ -1,4 +1,3 @@
-
 # compute kron(A, B)[ind, ind]
 function kron_sub!(out, A, B, ind)
   @assert size(out, 1) == size(out, 2) == length(ind)
@@ -21,6 +20,37 @@ function kron_sub!(out, A, B, ind)
   end
   out
 end
+
+function _getElemKron(A::AbstractMatrix, B::AbstractMatrix, row, col)
+    m, n = size(A)
+    p, q = size(B)
+
+    ac = div(col-1, p) + 1
+    bc = mod(col-1, p) + 1
+    ar = div(row-1, p) + 1
+    br = mod(row-1, p) + 1
+
+    @inbounds A[ar, ac] * B[br, bc]
+end
+
+
+function _getElemSKron(S::AbstractMatrix, xi::AbstractVector, row, col)
+    p = size(S, 1)
+
+    ac = div(col-1, p) + 1
+    bc = mod(col-1, p) + 1
+    ar = div(row-1, p) + 1
+    br = mod(row-1, p) + 1
+
+    @inbounds ( S[ar, ac] * xi[br] * xi[bc] + S[br, bc] * xi[ar] * xi[ac] ) / 2.
+end
+
+_getElemSKron(A::AbstractMatrix, B::AbstractMatrix, row, col) =
+    ( _getElemKron(A, B, row, col) + _getElemKron(B, A, row, col) ) / 2.
+
+
+
+
 
 # computes variance of Var(Sx - Sy)[indS, indS]
 # where indS is a list of elements in [1:p, 1:p]

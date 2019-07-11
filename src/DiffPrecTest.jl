@@ -138,7 +138,7 @@ function estimate(::SymmetricNormal, X, Y, ind)
       indS[pos], indS[1] = indS[1], indS[pos]
   end
 
-  estimate(SymmetricOracleNormal(), Sx, nx, Sy, ny, indS), x1, x2, indS
+  estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, indS), x1, x2, indS
 end
 
 
@@ -338,17 +338,116 @@ function estimate(
   DiffPrecResultNormal(Δab, sqrt(v))
 end
 
+# # computes
+# #
+# #    ω' vec(SΔ Z[k, :] Z[k, :]' + Z[k, :] Z[k, :]' Δ S) / 2.
+# function _mul(ω::SparseIterate, SΔZ::Matrix, Z::Matrix, k::Int)
+#     p = size(Z, 2)
+#     I = CartesianIndices((p,p))
+#
+#     out = 0.
+#
+#     @inbounds for i=1:nnz(ω)
+#         v = ω.nzval[i]
+#         ind = ω.nzval2ind[i]
+#         ri, ci = Tuple( I[ind] )
+#         out += v * ( SΔZ[ri, k] * Z[k, ci] + SΔZ[ci, k] * Z[k, ri] ) / 2.
+#     end
+#     out
+# end
+#
+# # computes
+# #
+# #    ω' vec(S - Z[k, :]*Z[k, :]')
+# function _mul(ω::SparseIterate, S::Symmetric, Z::Matrix, k::Int)
+#     p = size(Z, 2)
+#     I = CartesianIndices((p,p))
+#
+#     out = 0.
+#
+#     @inbounds for i=1:nnz(ω)
+#         v = ω.nzval[i]
+#         ind = ω.nzval2ind[i]
+#         ri, ci = Tuple( I[ind] )
+#         out += v * ( S[ri, ci] - Z[k, ri] * Z[k, ci] )
+#     end
+#     out
+# end
 
+# computes the variance of
+#
+#     ω'(H Δ - (Sy - Sx))
+#
+# where H = (Sx ⊗ Sy + Sy ⊗ Sx) / 2
+# and ω, Δ are fixed
+function variance(
+    ::SymmetricOracleNormal,
+    Sx::Symmetric,
+    Sy::Symmetric,
+    X::AbstractMatrix,
+    Y::AbstractMatrix,
+    ω::Vector,
+    Δ::Vector,
+    indS::Vector{Int64}
+    )
 
+    nx, p = size(X)
+    ny    = size(Y, 1)
 
-function variance(::SymmetricOracleNormal, Sx, Sy, X, Y, Δab)
+    q = zeros(nx)
+    r = zeros(ny)
+
+    # compute the value of the U-statistics
+    t = 0.
+    for ci=1:length(indS)
+        for ri=1:length(indS)
+            @inbounds t += _getElemSKron(Sx, Sy, indS[ri], indS[ci]) * ω[ri] * Δ[ci]
+        end
+        @inbounds t -= ω[ci] * (Sy[indS[ci]] - Sx[indS[ci]])
+    end
+
+    # compute qk
+    for k=1:nx
+        v = 0.
+        for ci=1:length(indS)
+            for ri=1:length(indS)
+                @inbounds v += _getElemSKron(Sy, view(X, k, :), indS[ri], indS[ci]) * ω[ri] * Δ[ci]
+            end
+            row, col = Tuple(CartesianIndices((p, p))[indS[ci]])
+            @inbounds v -= ω[ci] * (Sy[indS[ci]] - X[k, row] * X[k, col])
+        end
+        @inbounds q[k] = v
+    end
+    # compute rk
+    for k=1:ny
+        v = 0.
+        for ci=1:length(indS)
+            for ri=1:length(indS)
+                @inbounds v += _getElemSKron(Sx, view(Y, k, :), indS[ri], indS[ci]) * ω[ri] * Δ[ci]
+            end
+            row, col = Tuple(CartesianIndices((p, p))[indS[ci]])
+            @inbounds v -= ω[ci] * (Y[k, row] * Y[k, col] - Sx[indS[ci]])
+        end
+        @inbounds r[k] = v
+    end
+
+    σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
+    σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t^2
+
+    return σ1/nx + σ2/ny
 end
 
 function estimate(
     ::SymmetricOracleNormal,
-    Sx::Symmetric, nx::Int,
-    Sy::Symmetric, ny::Int,
-    indS)
+    Sx::Symmetric,
+    Sy::Symmetric,
+    X,
+    Y,
+    indS::Vector{Int64}
+    )
+
+  nx, p = size(X)
+  ny    = size(Y, 1)
 
   A = zeros(length(indS), length(indS))
   B = zeros(length(indS), length(indS))
@@ -356,13 +455,14 @@ function estimate(
   kron_sub!(A, Sy, Sx, indS)
   kron_sub!(B, Sx, Sy, indS)
   @. C = (A + B) / 2.
-  Δab = (C \ (Sy[indS] - Sx[indS]))[1]
 
+  tmp = zeros(length(indS))
+  tmp[1] = 1.
+  ω = C \ tmp
+  Δ = C \ (Sy[indS] - Sx[indS])
+  v = variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, Δ, indS)
 
-  varS  = _varSxSy(Sx, nx, Sy, ny, indS)
-  v = ((C \ varS) / C)[1]
-
-  DiffPrecResultNormal(Δab, sqrt(v))
+  DiffPrecResultNormal(Δ[1], sqrt(v))
 end
 
 
