@@ -11,7 +11,7 @@ using JLD
 pArr = [100, 200, 500]
 elemArr = [(5,5), (8, 7), (50, 25)]
 n = 300
-est      = Array{Any}(undef, 5)   # number of methods
+est      = Array{Any}(undef, 9)   # number of methods
 
 
 rep   = parse(Int,ARGS[1])
