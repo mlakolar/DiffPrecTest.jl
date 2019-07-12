@@ -16,6 +16,7 @@ export
   AsymmetricNormal,
   SeparateNormal,
   estimate,
+  variance,
   computeSimulationResult,
 
   # first and second stage functions
@@ -44,6 +45,8 @@ struct SymmetricOracleNormal <: DiffPrecMethod end
 struct SymmetricNormal <: DiffPrecMethod end
 struct AsymmetricNormal <: DiffPrecMethod end
 struct SeparateNormal <: DiffPrecMethod end
+struct OneStep <: DiffPrecMethod end             # not implemented yet
+struct OneStepRefit <: DiffPrecMethod end        # not implemented yet
 
 
 abstract type DiffPrecSupport end
@@ -95,11 +98,11 @@ function estimate(::SymmetricNormal, X, Y, row, col;
     Δ::Union{SymmetricSparseIterate, Nothing}=nothing,
     suppΔ::Union{BitArray{2}, Nothing}=nothing,
     ω::Union{SparseIterate, Nothing}=nothing,
-    suppω::Union{BitArray{2}, Nothing}=nothing,
+    suppω::Union{BitArray{2}, Nothing}=nothing
     )
 
   nx, p = size(X)
-  ny     = size(Y, 1)
+  ny    = size(Y, 1)
 
   if Sx === nothing
       Sx = Symmetric( X'X / nx )
@@ -141,72 +144,73 @@ end
 ####################################
 
 
-function estimate(::AsymmetricNormal, X, Y, ind;
-    x1::Union{SymmetricSparseIterate, Nothing}=nothing)
-  nx, px = size(X)
-  ny, py = size(Y)
-  @assert px == py
+function estimate(::AsymmetricNormal, X, Y, row, col;
+    Sx::Union{Symmetric, Nothing}=nothing,
+    Sy::Union{Symmetric, Nothing}=nothing,
+    Δ::Union{SymmetricSparseIterate, Nothing}=nothing,
+    suppΔ::Union{BitArray{2}, Nothing}=nothing,
+    ω::Union{SparseIterate, Nothing}=nothing,
+    suppω::Union{BitArray{2}, Nothing}=nothing
+    )
 
-  Sx = Symmetric(cov(X))
-  Sy = Symmetric(cov(Y))
+  nx, p = size(X)
+  ny    = size(Y, 1)
 
-  # first stage
-  λ = 1.01 * quantile(Normal(), 1. - 0.1 / (px * (px+1)))
-  if x1 === nothing
-      x1 = diffEstimation(Sx, Sy, X, Y, λ)
+  if Sx === nothing
+      Sx = Symmetric( X'X / nx )
+  end
+  if Sy === nothing
+      Sy = Symmetric( Y'Y / ny)
   end
 
-  S = BitArray(undef, (px, px))
-  fill!(S, false)
-  for ci=1:px
-      for ri=ci:px
-          if abs(x1[ri, ci] > 1e-3)
-              S[ri, ci] = true
-              S[ci, ri] = true
-          end
-      end
+  # first stage
+  λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
+  if Δ === nothing && suppΔ === nothing
+      Δ = diffEstimation(Sx, Sy, X, Y, λ)
+      suppΔ = getSupport(Δ)
+  end
+  if suppΔ === nothing
+      suppΔ = getSupport(Δ)
   end
 
   # second stage
-  I = CartesianIndices(Sx)
-  ri, ci = Tuple( I[ind] )
-  x2 = invAsymHessianEstimation(Sx, Sy, ri, ci, X, Y, λ)
-  for ci=1:px
-      for ri=1:px
-          if abs(x2[ri + (ci-1)*px] > 1e-3)
-              S[ri, ci] = true
-              S[ci, ri] = true
-          end
-      end
+  if ω === nothing && suppω === nothing
+      ω = invAsymHessianEstimation(Sx, Sy, row, col, X, Y, λ)
+      suppω = getSupport(ω, p)
+  end
+  if suppω === nothing
+      suppω = getSupport(ω, p)
   end
 
   # refit stage
-  indS = [LinearIndices((px, px))[x] for x in findall( S )]
-  pos = findfirst(isequal(ind), indS)
-  if  pos === nothing
-      pushfirst!(indS, ind)
-  else
-      indS[pos], indS[1] = indS[1], indS[pos]
-  end
-
-  estimate(AsymmetricOracleNormal(), Sx, nx, Sy, ny, indS), x1, x2, indS
+  indS = getLinearSupport(row, col, suppΔ, suppω)
+  estimate(AsymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS), Δ, suppΔ, ω, suppω, indS
 end
 
 
-function estimate(::SeparateNormal, X, Y, ind)
-  nx, px = size(X)
-  ny, py = size(Y)
-  @assert px == py
+function estimate(
+    ::SeparateNormal,
+    X,
+    Y,
+    ri,
+    ci;
+    Sx::Union{Symmetric, Nothing}=nothing,
+    Sy::Union{Symmetric, Nothing}=nothing
+    )
 
-  Sx = Symmetric(cov(X))
-  Sy = Symmetric(cov(Y))
+  nx, p = size(X)
+  ny    = size(Y, 1)
 
-  I = CartesianIndices(Sx)
-  ri, ci = Tuple( I[ind] )
+  if Sx === nothing
+      Sx = Symmetric( X'X / nx )
+  end
+  if Sy === nothing
+      Sy = Symmetric( Y'Y / ny)
+  end
 
   if ri == ci
-      lasso_x_r = lasso(X[:, 1:px .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(px) / nx))
-      lasso_y_r = lasso(Y[:, 1:px .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(px) / ny))
+      lasso_x_r = lasso(X[:, 1:p .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(p) / nx))
+      lasso_y_r = lasso(Y[:, 1:p .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(p) / ny))
 
       T1 = 1. / lasso_x_r.σ^2.
       T2 = 1. / lasso_y_r.σ^2.
@@ -222,10 +226,10 @@ function estimate(::SeparateNormal, X, Y, ind)
           ri, ci = ci, ri
       end
 
-      lasso_x_r = lasso(X[:, 1:px .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(px) / nx))
-      lasso_x_c = lasso(X[:, 1:px .!= ci], X[:, ci], 2. * sqrt(Sx[ci, ci] * log(px) / nx))
-      lasso_y_r = lasso(Y[:, 1:px .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(px) / ny))
-      lasso_y_c = lasso(Y[:, 1:px .!= ci], Y[:, ci], 2. * sqrt(Sy[ci, ci] * log(px) / ny))
+      lasso_x_r = lasso(X[:, 1:p .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(p) / nx))
+      lasso_x_c = lasso(X[:, 1:p .!= ci], X[:, ci], 2. * sqrt(Sx[ci, ci] * log(p) / nx))
+      lasso_y_r = lasso(Y[:, 1:p .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(p) / ny))
+      lasso_y_c = lasso(Y[:, 1:p .!= ci], Y[:, ci], 2. * sqrt(Sy[ci, ci] * log(p) / ny))
 
       T1 = dot(lasso_x_r.residuals, lasso_x_c.residuals) / nx + lasso_x_r.σ^2. * lasso_x_c.x[ri] + lasso_x_c.σ^2. * lasso_x_r.x[ci-1]
       T2 = dot(lasso_y_r.residuals, lasso_y_c.residuals) / ny + lasso_y_r.σ^2. * lasso_y_c.x[ri] + lasso_y_c.σ^2. * lasso_y_r.x[ci-1]
@@ -322,9 +326,6 @@ end
 
 
 
-
-
-
 function estimate(
     ::AsymmetricOracleNormal,
     Sx::Symmetric,
@@ -343,78 +344,19 @@ function estimate(
 
   A = kron_sub(Sy, Sx, indS, indS)
   Δ = A \ (Sy[indS] - Sx[indS])
-  Δab = row == col ? Δ[1] : ( Δ[1] + Δ[2] ) / 2.
 
-  v = 0.   # todo
+  tmp = zeros(length(indS))
+  tmp[1] = 1.
+  ω = A \ tmp
 
-  DiffPrecResultNormal(Δab, sqrt(v))
+  v = variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, Δ, indS)
+  DiffPrecResultNormal(Δ[1], sqrt(v))
 end
 
 
 
 
-# computes the variance of
-#
-#     ω'(H Δ - (Sy - Sx))
-#
-# where H = (Sx ⊗ Sy + Sy ⊗ Sx) / 2
-# and ω, Δ are fixed
-function variance(
-    ::SymmetricOracleNormal,
-    Sx::Symmetric,
-    Sy::Symmetric,
-    X::AbstractMatrix,
-    Y::AbstractMatrix,
-    ω::Vector,
-    Δ::Vector,
-    indS::Vector{Int64}
-    )
 
-    nx, p = size(X)
-    ny    = size(Y, 1)
-
-    q = zeros(nx)
-    r = zeros(ny)
-
-    # compute the value of the U-statistics
-    t = 0.
-    for ci=1:length(indS)
-        for ri=1:length(indS)
-            @inbounds t += _getElemSKron(Sx, Sy, indS[ri], indS[ci]) * ω[ri] * Δ[ci]
-        end
-        @inbounds t -= ω[ci] * (Sy[indS[ci]] - Sx[indS[ci]])
-    end
-
-    # compute qk
-    for k=1:nx
-        v = 0.
-        for ci=1:length(indS)
-            for ri=1:length(indS)
-                @inbounds v += _getElemSKron(Sy, view(X, k, :), indS[ri], indS[ci]) * ω[ri] * Δ[ci]
-            end
-            row, col = Tuple(CartesianIndices((p, p))[indS[ci]])
-            @inbounds v -= ω[ci] * (Sy[indS[ci]] - X[k, row] * X[k, col])
-        end
-        @inbounds q[k] = v
-    end
-    # compute rk
-    for k=1:ny
-        v = 0.
-        for ci=1:length(indS)
-            for ri=1:length(indS)
-                @inbounds v += _getElemSKron(Sx, view(Y, k, :), indS[ri], indS[ci]) * ω[ri] * Δ[ci]
-            end
-            row, col = Tuple(CartesianIndices((p, p))[indS[ci]])
-            @inbounds v -= ω[ci] * (Y[k, row] * Y[k, col] - Sx[indS[ci]])
-        end
-        @inbounds r[k] = v
-    end
-
-    σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
-    σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t^2
-
-    return σ1/nx + σ2/ny
-end
 
 function estimate(
     ::SymmetricOracleNormal,

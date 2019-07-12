@@ -56,7 +56,7 @@ for ip=1:2
 
     res = load("../sim3_res_$(ip)_$(iElem).jld", "results")
 
-    for j in 1:5
+    for j in 1:9
       sr = computeSimulationResult([res[j, i] for i=1:1000], tΔ[indE])
       push!(df, [pArr[ip], elemArr[iElem][1], elemArr[iElem][2], tΔ[indE], methodArr[j], sr.bias, sr.coverage, sr.lenCoverage])
     end

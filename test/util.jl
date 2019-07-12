@@ -34,7 +34,7 @@ end
     @test DiffPrecTest.skron_sub(A, B, I, I1) == k[I, I1]
 end
 
-@testset "symkron" begin
+@testset "getelem symkron" begin
     S = Symmetric( cov( randn(100, 5) ) )
     X = randn(10, 5)
 
@@ -57,7 +57,28 @@ end
             @test sKron[ri, ci] ≈ v
         end
     end
-
 end
+
+
+@testset "getelem kron" begin
+    S = Symmetric( cov( randn(100, 5) ) )
+    X = randn(10, 5)
+
+    for i=1:10
+        k  = kron(S, X[i,:] * X[i, :]')
+        k1 = kron(X[i,:] * X[i, :]', S)
+
+        for ci=1:25
+            for ri=1:25
+                v  = DiffPrecTest._getElemKron(S, view(X, i, :), ri, ci)
+                v1 = DiffPrecTest._getElemKron(view(X, i, :), S, ri, ci)
+                @test k[ri, ci] ≈ v
+                @test k1[ri, ci] ≈ v1
+            end
+        end
+    end
+end
+
+
 
 end

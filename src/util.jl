@@ -66,6 +66,27 @@ function _getElemKron(A::AbstractMatrix, B::AbstractMatrix, row, col)
     @inbounds A[ar, ac] * B[br, bc]
 end
 
+function _getElemKron(S::AbstractMatrix, xi::AbstractVector, row, col)
+    p = size(S, 1)
+
+    ac = div(col-1, p) + 1
+    bc = mod(col-1, p) + 1
+    ar = div(row-1, p) + 1
+    br = mod(row-1, p) + 1
+
+    @inbounds S[ar, ac] * xi[br] * xi[bc]
+end
+
+function _getElemKron(xi::AbstractVector, S::AbstractMatrix, row, col)
+    p = size(S, 1)
+
+    ac = div(col-1, p) + 1
+    bc = mod(col-1, p) + 1
+    ar = div(row-1, p) + 1
+    br = mod(row-1, p) + 1
+
+    @inbounds S[br, bc] * xi[ar] * xi[ac]
+end
 
 function _getElemSKron(S::AbstractMatrix, xi::AbstractVector, row, col)
     p = size(S, 1)
@@ -142,7 +163,7 @@ end
 function getLinearSupport(row::Int, col::Int, S1::BitArray{2}, S2::BitArray{2})
   p = size(S1, 1)
 
-  supp = []
+  supp = Vector{Int64}()
   for i=1:p
     for j=1:p
       if S1[i, j] | S2[i,j]
@@ -156,7 +177,7 @@ end
 function getLinearSupport(row::Int, col::Int, S::BitArray{2})
   p = size(S, 1)
 
-  supp = []
+  supp = Vector{Int64}()
   for i=1:p
     for j=1:p
       if S[i, j]
