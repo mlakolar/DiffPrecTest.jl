@@ -56,9 +56,8 @@ Sxtest = Symmetric( cov(Xtest) )
 Sytest = Symmetric( cov(Ytest) )
 
 @time eS = DiffPrecTest.__initSupport(Sx, Sy, X, Y)
-
-eΔNormal, _, _ = supportEstimate(ANTSupport(), X, Y; estimSupport=eS)
-eΔBoot  , _, _ = supportEstimate(BootStdSupport(), X, Y; estimSupport=eS)
+@time eΔNormal, _, _ = supportEstimate(ANTSupport(), X, Y; estimSupport=eS)
+@time eΔBoot  , _, _ = supportEstimate(BootStdSupport(), X, Y; estimSupport=eS)
 
 # compete method
 

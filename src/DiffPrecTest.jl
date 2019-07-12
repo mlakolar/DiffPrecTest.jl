@@ -457,7 +457,7 @@ function __initSupport(
     # first stage
     λ = 1.01 * quantile(Normal(), 1. - 0.1 / (p * (p+1)))
     x1 = diffEstimation(Sx, Sy, X, Y, λ)
-    S1 = getSupport(x)
+    S1 = getSupport(x1)
 
     # second stage
     ind = 0
@@ -530,7 +530,7 @@ function supportEstimate(::BootStdSupport, X, Y; estimSupport::Union{Array{BitAr
             it = it + 1
             indS = getLinearSupport(row, col, eS[it])
 
-            out[it] = estimate(SymmetricOracleBoot(), X, Y, indS)
+            out[it] = estimate(SymmetricOracleBoot(), Sx, Sy, X, Y, row, col, indS)
         end
     end
 
@@ -571,8 +571,8 @@ function supportEstimate(::DTraceValidationSupport,
 
     numΛ = length(Λarr)
     eΔarr = Vector{SparseMatrixCSC{Float64,Int64}}(undef, numΛ)
-    loss2arr = Vector{SparseMatrixCSC{Float64,Int64}}(undef, numΛ)
-    lossInfarr = Vector{SparseMatrixCSC{Float64,Int64}}(undef, numΛ)
+    loss2arr = Vector{Float64}(undef, numΛ)
+    lossInfarr = Vector{Float64}(undef, numΛ)
 
     f = CDDirectDifferenceLoss(Sx, Sy)
     x = SymmetricSparseIterate(f.p)
@@ -590,7 +590,7 @@ function supportEstimate(::DTraceValidationSupport,
         numSteps=options.numSteps)
 
     for i=2:numΛ
-        g = ProxL1(λ)
+        g = ProxL1(Λarr[i])
         coordinateDescent!(x, f, g, opt)
         eΔarr[i] = sparse(Matrix(x))
         loss2arr[i] = CovSel.diffLoss(SxValid, x, SyValid, 2)
