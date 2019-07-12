@@ -8,11 +8,11 @@ methodArr = ["Our-N", "YinXia", "Our-B", "Oracle-N", "Oracle-B"]
 
 df = DataFrame(p = Int[], row = Int[], col = Int[], method=String[], bias=Float64[], coverage=Float64[], lenCI=Float64[])
 
-for ip=1:3
+for ip=1:2
   for iElem=1:3
     res = load("../sim1_res_$(ip)_$(iElem).jld", "results")
-    
-    for j in 1:5
+
+    for j in 1:9
       global pArr
       global elemArr
       global methodArr

@@ -402,38 +402,16 @@ function __initSupport(
     # first stage
     λ = 1.01 * quantile(Normal(), 1. - 0.1 / (px * (px+1)))
     x1 = diffEstimation(Sx, Sy, X, Y, λ)
-
-    S1 = BitArray(undef, (px, px))
-    fill!(S1, false)
-    for ci=1:px
-        for ri=ci:px
-            if abs(x1[ri, ci] > 1e-3)
-                S1[ri, ci] = true
-                S1[ci, ri] = true
-                S1[ri, ri] = true
-                S1[ci, ci] = true
-            end
-        end
-    end
+    S1 = getSupport(x)
 
     # second stage
     ind = 0
     for ci=1:px
         for ri=ci:px
             x2 = invHessianEstimation(Sx, Sy, ri, ci, X, Y, λ)
+            S2 = getSupport(x2, px)
             ind = ind + 1
-            estimSupp[ind] = copy(S1)
-
-            for _ci=1:px
-                for _ri=1:px
-                    if abs(x2[_ri + (_ci-1)*px] > 1e-3)
-                        estimSupp[ind][_ri, _ci] = true
-                        estimSupp[ind][_ci, _ri] = true
-                        estimSupp[ind][_ri, _ri] = true
-                        estimSupp[ind][_ci, _ci] = true
-                    end
-                end
-            end
+            estimSupp[ind] = S1 .| S2
         end
     end
 
@@ -454,15 +432,7 @@ function supportEstimate(::ANTSupport, X, Y; estimSupport::Union{Array{BitArray}
     for col=1:p
         for row=col:p
             it = it + 1
-            ind = (col - 1) * p + row
-
-            indS = [LinearIndices((p, p))[x] for x in findall( eS[it] )]
-            pos = findfirst(isequal(ind), indS)
-            if  pos === nothing
-                pushfirst!(indS, ind)
-            else
-                indS[pos], indS[1] = indS[1], indS[pos]
-            end
+            indS = getLinearSupport(row, col, eS[it])
 
             out[it] = estimate(SymmetricOracleNormal(), Sx, nx, Sy, ny, indS)
         end
@@ -503,15 +473,7 @@ function supportEstimate(::BootStdSupport, X, Y; estimSupport::Union{Array{BitAr
     for col=1:p
         for row=col:p
             it = it + 1
-            ind = (col - 1) * p + row
-
-            indS = [LinearIndices((p, p))[x] for x in findall( eS[it] )]
-            pos = findfirst(isequal(ind), indS)
-            if  pos === nothing
-                pushfirst!(indS, ind)
-            else
-                indS[pos], indS[1] = indS[1], indS[pos]
-            end
+            indS = getLinearSupport(row, col, eS[it])
 
             out[it] = estimate(SymmetricOracleBoot(), X, Y, indS)
         end
