@@ -70,8 +70,8 @@ ri, ci = elemArr[iElem]
 @time est[1], eΔ, esuppΔ, eω, esuppω, eSupport = DiffPrecTest.estimate(SymmetricNormal(), X, Y, ri, ci; Sx=Sx, Sy=Sy)
 @time est[2], _, _, _, _, _ = DiffPrecTest.estimate(AsymmetricNormal(), X, Y, ri, ci; Sx=Sx, Sy=Sy, Δ=eΔ, suppΔ=esuppΔ)
 @time est[3] = DiffPrecTest.estimate(SeparateNormal(), X, Y, ri, ci; Sx=Sx, Sy=Sy)
-@time est[4] = DiffPrecTest.estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, ri, ci, eSupport)
-@time est[5] = DiffPrecTest.estimate(AsymmetricOracleNormal(), Sx, Sy, X, Y, ri, ci, eSupport)
+@time est[4] = DiffPrecTest.estimate(SymmetricOracleBoot(), Sx, Sy, X, Y, ri, ci, eSupport)
+@time est[5] = DiffPrecTest.estimate(AsymmetricOracleBoot(), Sx, Sy, X, Y, ri, ci, eSupport)
 
 @time est[6] = DiffPrecTest.estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, ri, ci, supportOracle)
 @time est[7] = DiffPrecTest.estimate(AsymmetricOracleNormal(), Sx, Sy, X, Y, ri, ci, supportOracle)

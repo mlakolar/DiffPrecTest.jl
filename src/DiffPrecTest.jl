@@ -15,6 +15,8 @@ export
   SymmetricNormal,
   AsymmetricNormal,
   SeparateNormal,
+  DecorrelatedScoreNormal,
+  DecorrelatedScoreOracleNormal,
   estimate,
   variance,
   computeSimulationResult,
@@ -42,12 +44,14 @@ struct AsymmetricOracleBoot <: DiffPrecMethod end
 struct SymmetricOracleBoot <: DiffPrecMethod end
 struct AsymmetricOracleNormal <: DiffPrecMethod end
 struct SymmetricOracleNormal <: DiffPrecMethod end
-struct SymmetricNormal <: DiffPrecMethod end
 struct AsymmetricNormal <: DiffPrecMethod end
+struct SymmetricNormal <: DiffPrecMethod end
 struct SeparateNormal <: DiffPrecMethod end
+
 struct OneStep <: DiffPrecMethod end             # not implemented yet
 struct OneStepRefit <: DiffPrecMethod end        # not implemented yet
-
+struct DecorrelatedScoreNormal <: DiffPrecMethod end
+struct DecorrelatedScoreOracleNormal <: DiffPrecMethod end
 
 abstract type DiffPrecSupport end
 struct ANTSupport <: DiffPrecSupport end
@@ -349,7 +353,7 @@ function estimate(
   tmp[1] = 1.
   ω = A \ tmp
 
-  v = variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, Δ, indS)
+  v = variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, indS, Δ, indS)
   DiffPrecResultNormal(Δ[1], sqrt(v))
 end
 
@@ -379,9 +383,59 @@ function estimate(
   tmp[1] = 1.
   ω = C \ tmp
   Δ = C \ (Sy[indS] - Sx[indS])
-  v = variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, Δ, indS)
+  v = variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, indS, Δ, indS)
 
   DiffPrecResultNormal(Δ[1], sqrt(v))
+end
+
+
+
+# indΔ does not contain coordinates we are doing inference about
+function estimate(
+    ::DecorrelatedScoreOracleNormal,
+    Sx::Symmetric,
+    Sy::Symmetric,
+    X,
+    Y,
+    row,
+    col,
+    ω::Vector{Float64},
+    indω::Vector{Int64},
+    Δn::Vector{Float64},
+    indΔn::Vector{Int64}
+    )
+
+  nx, p = size(X)
+  ny    = size(Y, 1)
+
+  v = 0.
+  for ci=1:length(indΔ)
+      for ri=1:length(indω)
+          @inbounds v += _getElemSKron(Sx, Sy, indω[ri], indΔn[ci]) * ω[ri] * Δn[ci]
+      end
+  end
+  for ri=1:length(indω)
+      @inbounds v -= ω[ri] * (Sy[indω[ri]] - Sx[indω[ri]])
+  end
+  a = 0.
+  if row == col
+      ind = (col-1)*p + row
+      for ri=1:length(indω)
+          @inbounds a += ω[ri] * _getElemSKron(Sx, Sy, indω[ri], ind)
+      end
+  else
+      ind1 = (col-1)*p + row
+      ind2 = (row-1)*p + col
+      for ri=1:length(indω)
+          @inbounds a += ω[ri] * (_getElemSKron(Sx, Sy, indω[ri], ind1) + _getElemSKron(Sx, Sy, indω[ri], ind2))
+      end
+  end
+  Δab = -v / a
+
+
+  v = variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, indω, Δ, indΔ)
+
+  DiffPrecResultNormal(Δab, sqrt(v))
 end
 
 
@@ -394,22 +448,23 @@ end
 
 function __initSupport(
     Sx::Symmetric, Sy::Symmetric, X, Y)
-    nx, px = size(X)
-    ny, py = size(Y)
 
-    estimSupp = Array{BitArray}(undef, div((px + 1)*px, 2))
+    nx, p = size(X)
+    ny     = size(Y, 1)
+
+    estimSupp = Array{BitArray}(undef, div((p + 1)*p, 2))
 
     # first stage
-    λ = 1.01 * quantile(Normal(), 1. - 0.1 / (px * (px+1)))
+    λ = 1.01 * quantile(Normal(), 1. - 0.1 / (p * (p+1)))
     x1 = diffEstimation(Sx, Sy, X, Y, λ)
     S1 = getSupport(x)
 
     # second stage
     ind = 0
-    for ci=1:px
-        for ri=ci:px
+    for ci=1:p
+        for ri=ci:p
             x2 = invHessianEstimation(Sx, Sy, ri, ci, X, Y, λ)
-            S2 = getSupport(x2, px)
+            S2 = getSupport(x2, p)
             ind = ind + 1
             estimSupp[ind] = S1 .| S2
         end
@@ -434,7 +489,7 @@ function supportEstimate(::ANTSupport, X, Y; estimSupport::Union{Array{BitArray}
             it = it + 1
             indS = getLinearSupport(row, col, eS[it])
 
-            out[it] = estimate(SymmetricOracleNormal(), Sx, nx, Sy, ny, indS)
+            out[it] = estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS)
         end
     end
 
