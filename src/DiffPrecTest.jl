@@ -89,56 +89,47 @@ include("util.jl")
 #
 ##############################
 
-function estimate(::SymmetricNormal, X, Y, ind)
-  nx, px = size(X)
-  ny, py = size(Y)
-  @assert px == py
+function estimate(::SymmetricNormal, X, Y, row, col;
+    Sx::Union{Symmetric, Nothing}=nothing,
+    Sy::Union{Symmetric, Nothing}=nothing,
+    Δ::Union{SymmetricSparseIterate, Nothing}=nothing,
+    suppΔ::Union{BitArray{2}, Nothing}=nothing,
+    ω::Union{SparseIterate, Nothing}=nothing,
+    suppω::Union{BitArray{2}, Nothing}=nothing,
+    )
 
-  Sx = Symmetric(cov(X))
-  Sy = Symmetric(cov(Y))
+  nx, p = size(X)
+  ny     = size(Y, 1)
+
+  if Sx === nothing
+      Sx = Symmetric( X'X / nx )
+  end
+  if Sy === nothing
+      Sy = Symmetric( Y'Y / ny)
+  end
 
   # first stage
-  λ = 1.01 * quantile(Normal(), 1. - 0.1 / (px * (px+1)))
-  x1 = diffEstimation(Sx, Sy, X, Y, λ)
-
-  S = BitArray(undef, (px, px))
-  fill!(S, false)
-  for ci=1:px
-      for ri=ci:px
-          if abs(x1[ri, ci] > 1e-3)
-              S[ri, ci] = true
-              S[ci, ri] = true
-              S[ri, ri] = true
-              S[ci, ci] = true
-          end
-      end
+  λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
+  if Δ === nothing && suppΔ === nothing
+      Δ = diffEstimation(Sx, Sy, X, Y, λ)
+      suppΔ = getSupport(Δ)
+  end
+  if suppΔ === nothing
+      suppΔ = getSupport(Δ)
   end
 
   # second stage
-  I = CartesianIndices(Sx)
-  ri, ci = Tuple( I[ind] )
-  x2 = invHessianEstimation(Sx, Sy, ri, ci, X, Y, λ)
-  for ci=1:px
-      for ri=1:px
-          if abs(x2[ri + (ci-1)*px] > 1e-3)
-              S[ri, ci] = true
-              S[ci, ri] = true
-              S[ri, ri] = true
-              S[ci, ci] = true
-          end
-      end
+  if ω === nothing && suppω === nothing
+      ω = invHessianEstimation(Sx, Sy, row, col, X, Y, λ)
+      suppω = getSupport(ω, p)
+  end
+  if suppω === nothing
+      suppω = getSupport(ω, p)
   end
 
   # refit stage
-  indS = [LinearIndices((px, px))[x] for x in findall( S )]
-  pos = findfirst(isequal(ind), indS)
-  if  pos === nothing
-      pushfirst!(indS, ind)
-  else
-      indS[pos], indS[1] = indS[1], indS[pos]
-  end
-
-  estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, indS), x1, x2, indS
+  indS = getLinearSupport(row, col, suppΔ, suppω)
+  estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS), Δ, suppΔ, ω, suppω, indS
 end
 
 
@@ -259,18 +250,25 @@ end
 
 
 # indS --- coordinates for the nonzero element of the true Δ (LinearIndices)
-#          the first coordinate of indS is the one we make inference for
-function estimate(::AsymmetricOracleBoot, X, Y, indS; bootSamples::Int64=1000)
-  nx, px = size(X)
-  ny, py = size(Y)
-  @assert px == py
+function estimate(::AsymmetricOracleBoot,
+    Sx::Symmetric,
+    Sy::Symmetric,
+    X,
+    Y,
+    row,
+    col,
+    indS::Vector{Int64};
+    bootSamples::Int64=1000
+    )
 
-  Sx = cov(X)
-  Sy = cov(Y)
+  nx, p = size(X)
+  ny    = size(Y, 1)
 
-  A = zeros(length(indS), length(indS))
-  kron_sub!(A, Sy, Sx, indS)
-  Δab = (A \ (Sy[indS] - Sx[indS]))[1]
+  makeFirst!(indS, p, row, col)
+
+  A = kron_sub(Sy, Sx, indS, indS)
+  Δ = A \ (Sy[indS] - Sx[indS])
+  Δab = row == col ? Δ[1] : ( Δ[1] + Δ[2] ) / 2.
 
   boot_est = zeros(Float64, bootSamples)
   for b=1:bootSamples
@@ -278,9 +276,9 @@ function estimate(::AsymmetricOracleBoot, X, Y, indS; bootSamples::Int64=1000)
      bY_ind = sample(1:ny, ny)
      bSx = cov(X[bX_ind, :])
      bSy = cov(Y[bY_ind, :])
-
-     kron_sub!(A, bSy, bSx, indS)
-     boot_est[b] = (A \ (bSy[indS] - bSx[indS]))[1]
+     kron_sub!(A, bSy, bSx, indS, indS)
+     Δb = A \ (bSy[indS] - bSx[indS])
+     boot_est[b] = row == col ? Δb[1] : ( Δb[1] + Δb[2] ) / 2.
   end
 
   DiffPrecResultBoot(Δab, boot_est)
@@ -288,20 +286,23 @@ end
 
 
 # indS --- coordinates for the nonzero element of the true Δ (LinearIndices)
-function estimate(::SymmetricOracleBoot, X, Y, indS; bootSamples::Int64=1000)
-  nx, px = size(X)
-  ny, py = size(Y)
-  @assert px == py
+function estimate(::SymmetricOracleBoot,
+    Sx::Symmetric,
+    Sy::Symmetric,
+    X,
+    Y,
+    row,
+    col,
+    indS::Vector{Int64};
+    bootSamples::Int64=1000
+    )
 
-  Sx = cov(X)
-  Sy = cov(Y)
+  nx, p = size(X)
+  ny    = size(Y, 1)
 
-  A = zeros(length(indS), length(indS))
-  B = zeros(length(indS), length(indS))
-  C = zeros(length(indS), length(indS))
-  kron_sub!(A, Sy, Sx, indS)
-  kron_sub!(B, Sx, Sy, indS)
-  @. C = (A + B) / 2.
+  makeFirst!(indS, p, row, col)
+
+  C = skron_sub(Sx, Sy, indS, indS)
   Δab = (C \ (Sy[indS] - Sx[indS]))[1]
 
   boot_est = zeros(Float64, bootSamples)
@@ -310,11 +311,7 @@ function estimate(::SymmetricOracleBoot, X, Y, indS; bootSamples::Int64=1000)
      bY_ind = sample(1:ny, ny)
      bSx = cov(X[bX_ind, :])
      bSy = cov(Y[bY_ind, :])
-
-     kron_sub!(A, bSy, bSx, indS)
-     kron_sub!(B, bSx, bSy, indS)
-     @. C = (A + B) / 2.
-
+     skron_sub!(C, bSx, bSy, indS, indS)
      boot_est[b] = (C \ (bSy[indS] - bSx[indS]))[1]
   end
 
@@ -323,56 +320,38 @@ end
 
 
 
+
+
+
+
+
 function estimate(
     ::AsymmetricOracleNormal,
-    Sx::Symmetric, nx::Int,
-    Sy::Symmetric, ny::Int,
-    indS)
+    Sx::Symmetric,
+    Sy::Symmetric,
+    X,
+    Y,
+    row,
+    col,
+    indS::Vector{Int64}
+    )
 
-  A = zeros(length(indS), length(indS))
-  kron_sub!(A, Sy, Sx, indS)
-  Δab = (A \ (Sy[indS] - Sx[indS]))[1]
-  varS  = _varSxSy(Sx, nx, Sy, ny, indS)
-  v = ((A \ varS) / A)[1]
+  nx, p = size(X)
+  ny    = size(Y, 1)
+
+  makeFirst!(indS, p, row, col)
+
+  A = kron_sub(Sy, Sx, indS, indS)
+  Δ = A \ (Sy[indS] - Sx[indS])
+  Δab = row == col ? Δ[1] : ( Δ[1] + Δ[2] ) / 2.
+
+  v = 0.   # todo
 
   DiffPrecResultNormal(Δab, sqrt(v))
 end
 
-# # computes
-# #
-# #    ω' vec(SΔ Z[k, :] Z[k, :]' + Z[k, :] Z[k, :]' Δ S) / 2.
-# function _mul(ω::SparseIterate, SΔZ::Matrix, Z::Matrix, k::Int)
-#     p = size(Z, 2)
-#     I = CartesianIndices((p,p))
-#
-#     out = 0.
-#
-#     @inbounds for i=1:nnz(ω)
-#         v = ω.nzval[i]
-#         ind = ω.nzval2ind[i]
-#         ri, ci = Tuple( I[ind] )
-#         out += v * ( SΔZ[ri, k] * Z[k, ci] + SΔZ[ci, k] * Z[k, ri] ) / 2.
-#     end
-#     out
-# end
-#
-# # computes
-# #
-# #    ω' vec(S - Z[k, :]*Z[k, :]')
-# function _mul(ω::SparseIterate, S::Symmetric, Z::Matrix, k::Int)
-#     p = size(Z, 2)
-#     I = CartesianIndices((p,p))
-#
-#     out = 0.
-#
-#     @inbounds for i=1:nnz(ω)
-#         v = ω.nzval[i]
-#         ind = ω.nzval2ind[i]
-#         ri, ci = Tuple( I[ind] )
-#         out += v * ( S[ri, ci] - Z[k, ri] * Z[k, ci] )
-#     end
-#     out
-# end
+
+
 
 # computes the variance of
 #
@@ -443,18 +422,16 @@ function estimate(
     Sy::Symmetric,
     X,
     Y,
+    row,
+    col,
     indS::Vector{Int64}
     )
 
   nx, p = size(X)
   ny    = size(Y, 1)
 
-  A = zeros(length(indS), length(indS))
-  B = zeros(length(indS), length(indS))
-  C = zeros(length(indS), length(indS))
-  kron_sub!(A, Sy, Sx, indS)
-  kron_sub!(B, Sx, Sy, indS)
-  @. C = (A + B) / 2.
+  makeFirst!(indS, p, row, col)
+  C = skron_sub(Sx, Sy, indS, indS)
 
   tmp = zeros(length(indS))
   tmp[1] = 1.
@@ -643,8 +620,8 @@ function supportEstimate(::DTraceValidationSupport,
     g = ProxL1(Λarr[1])
     coordinateDescent!(x, f, g, options)
     eΔarr[1] = sparse(Matrix(x))
-    loss2arr[1] = diffLoss(SxValid, x, SyValid, 2)
-    lossInfarr[1] = diffLoss(SxValid, x, SyValid, Inf)
+    loss2arr[1] = CovSel.diffLoss(SxValid, x, SyValid, 2)
+    lossInfarr[1] = CovSel.diffLoss(SxValid, x, SyValid, Inf)
 
     opt = CDOptions(;
         maxIter=options.maxIter,
@@ -657,8 +634,8 @@ function supportEstimate(::DTraceValidationSupport,
         g = ProxL1(λ)
         coordinateDescent!(x, f, g, opt)
         eΔarr[i] = sparse(Matrix(x))
-        loss2arr[i] = diffLoss(SxValid, x, SyValid, 2)
-        lossInfarr[i] = diffLoss(SxValid, x, SyValid, Inf)
+        loss2arr[i] = CovSel.diffLoss(SxValid, x, SyValid, 2)
+        lossInfarr[i] = CovSel.diffLoss(SxValid, x, SyValid, Inf)
     end
 
     # find min loss
