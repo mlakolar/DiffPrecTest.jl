@@ -61,7 +61,7 @@ function variance(
             row, col = Tuple(CartesianIndices((p, p))[indω[ri]])
             @inbounds v -= ω[ri] * (Y[k, row] * Y[k, col] - Sx[indω[ri]])
         end
-        @inbounds q[k] = v
+        @inbounds r[k] = v
     end
 
     σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
@@ -134,7 +134,7 @@ function variance(
             row, col = Tuple(CartesianIndices((p, p))[indω[ri]])
             @inbounds v -= ω[ri] * (Y[k, row] * Y[k, col] - Sx[indω[ri]])
         end
-        @inbounds q[k] = v
+        @inbounds r[k] = v
     end
 
     σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2

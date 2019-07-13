@@ -1,5 +1,6 @@
 tests = [
   "util",
+  "variance"
 ]
 
 for t in tests
