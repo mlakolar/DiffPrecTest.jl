@@ -4,10 +4,11 @@
 ##   sbatch --job-name=diff_sim1_${1}_${2} sbatch_sim1 dir
 
 #SBATCH --ntasks=28
-##SBATCH --job-name=diff_sim1
+#SBATCH --job-name=diff_sim5
 #SBATCH --partition=standard
 #SBATCH --time=7-00:00:00
 #SBATCH --exclusive
+#SBATCH --exclude=mcn45
 
 mkdir -p /scratch/mkolar/diffTest/sim5
 mkdir -p /scratch/mkolar/output/sim5
