@@ -13,7 +13,7 @@ df = DataFrame(p = Int[], row = Int[], col = Int[], trueValue=Float64[], method=
 for ip=1:2
   for iElem=1:5
     p = pArr[ip]
-    Random.seed!(7658)
+    Random.seed!(7689)
 
     # generate model
     Ωx = Matrix{Float64}(I, p, p)
@@ -25,7 +25,7 @@ for ip=1:2
       Ωx[l  , l+2] = 0.2
       Ωx[l+2, l  ] = 0.2
     end
-    Ωy = Matrix{Float64}(I, p, p)
+    Ωy = Matrix{Float64}(I, p, p) * 1.1
     for l=1:p-1
       Ωy[l  , l+1] = 0.3
       Ωy[l+1, l  ] = 0.3
@@ -45,7 +45,7 @@ for ip=1:2
 
     tΔ = D * Δ * D
 
-    res = load("../sim6_res_$(ip)_$(iElem).jld", "results")
+    res = load("../sim7_res_$(ip)_$(iElem).jld", "results")
 
     ri, ci = elemArr[iElem]
     indE = (ci - 1) * p + ri
@@ -57,4 +57,4 @@ for ip=1:2
   end
 end
 
-CSV.write("sim6.csv", df)
+CSV.write("sim7.csv", df)
