@@ -1,7 +1,7 @@
 using JLD
 using DiffPrecTest
 using DataFrames, CSV
-using Random, LinearAlgebra, Distributions
+using Random, LinearAlgebra, Distributions, SparseArrays
 using CovSel
 
 dir = ARGS[1]
@@ -26,26 +26,49 @@ for l=1:p-k
     Ωy[l+k, l  ] = 0.2
 end
 Δ = Ωx - Ωy
-
+@show Δ[1:10, 1:10]
 
 NUM_REP = 100
-resOur = Array{ConfusionMatrix}(undef, NUM_REP)
+resN = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
+resBoot = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
+resDTr2 = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
+resDTrInf = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
 i = 0
 for rep=1:NUM_REP
+    global i, resN, resBoot, resDTr2, resDTrInf
     fname = "$(dir)/res_$(rep).jld"
 
     try
       i += 1
       file = jldopen(fname, "r")
       eΔNormal = read(file, "eΔNormal")
+      eΔBoot = read(file, "eΔBoot")
+      eΔDTr = read(file, "eΔDTr")
+      i2 = read(file, "i2")
+      iInf = read(file, "iInf")
       close(file)
 
-      resOur[i] = getConfusionMatrix(Δ, eΔNormal)
+      resN[i] = CovSel.getConfusionMatrix(Δ, eΔNormal)
+      resBoot[i] = CovSel.getConfusionMatrix(Δ, eΔBoot)
+      resDTr2[i] = CovSel.getConfusionMatrix(Δ, eΔDTr[i2])
+      resDTrInf[i] = CovSel.getConfusionMatrix(Δ, eΔDTr[iInf])
     catch
          @show fname
     end
 end
 
-@show mean([tpr(resOur[j]) for j=1:i])
-@show mean([fpr(resOur[j]) for j=1:i])
-@show mean([precision(resOur[j]) for j=1:i])
+@show mean([CovSel.tpr(resN[j]) for j=1:i])
+@show mean([CovSel.fpr(resN[j]) for j=1:i])
+@show mean([CovSel.precision(resN[j]) for j=1:i])
+
+@show mean([CovSel.tpr(resBoot[j]) for j=1:i])
+@show mean([CovSel.fpr(resBoot[j]) for j=1:i])
+@show mean([CovSel.precision(resBoot[j]) for j=1:i])
+
+@show mean([CovSel.tpr(resDTr2[j]) for j=1:i])
+@show mean([CovSel.fpr(resDTr2[j]) for j=1:i])
+@show mean([CovSel.precision(resDTr2[j]) for j=1:i])
+
+@show mean([CovSel.tpr(resDTrInf[j]) for j=1:i])
+@show mean([CovSel.fpr(resDTrInf[j]) for j=1:i])
+@show mean([CovSel.precision(resDTrInf[j]) for j=1:i])
