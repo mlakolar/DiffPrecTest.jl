@@ -51,14 +51,16 @@ Ytest = rand(dist_Y, n)'
 #
 #################
 
+τArr = collect( range(10,0,length=500) )
+
 Sx = Symmetric( cov(X) )
 Sy = Symmetric( cov(Y) )
 Sxtest = Symmetric( cov(Xtest) )
 Sytest = Symmetric( cov(Ytest) )
 
 @time eS = DiffPrecTest.__initSupport(Sx, Sy, X, Y)
-@time eΔNormal, _, _ = supportEstimate(ANTSupport(), X, Y; estimSupport=eS)
-@time eΔBoot  , _, _ = supportEstimate(BootStdSupport(), X, Y; estimSupport=eS)
+@time eΔNormal, eΔNormalP, _ = supportEstimate(ANTSupport(), X, Y, τArr; estimSupport=eS)
+@time eΔBoot  , eΔBootP, _ = supportEstimate(BootStdSupport(), X, Y, τArr; estimSupport=eS)
 
 # compete method
 
@@ -68,4 +70,4 @@ minλ = maxλ * 0.04
 
 eΔDTr, i2, iInf, loss2arr, lossInfarr = supportEstimate(DTraceValidationSupport(), Sx, Sy, Sxtest, Sytest, Λarr)
 
-@save "$(dir)/res_$(rep).jld" eΔNormal eΔBoot eS eΔDTr i2 iInf loss2arr lossInfarr
+@save "$(dir)/res_$(rep).jld" eΔNormal eΔNormalP eΔBoot eΔBootP eS eΔDTr i2 iInf loss2arr lossInfarr
