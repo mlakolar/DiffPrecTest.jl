@@ -26,7 +26,6 @@ for l=1:p-k
     Ωy[l+k, l  ] = 0.2
 end
 Δ = Ωx - Ωy
-@show Δ[1:10, 1:10]
 
 NUM_REP = 100
 resN = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)

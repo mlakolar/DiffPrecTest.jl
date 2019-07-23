@@ -31,7 +31,6 @@ for l=1:p-k
     Ωy[l+k, l  ] = -0.17
 end
 Δ = Ωx - Ωy
-eigvals(Ωy)
 
 Σx = inv(Symmetric(Ωx))
 Σy = inv(Symmetric(Ωy))
