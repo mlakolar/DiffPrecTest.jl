@@ -24,7 +24,6 @@ for k=1:p-1
 end
 
 Ωy = copy(Ωx)
-# k = div(p, 4)
 k = 2
 for l=1:p-k
     Ωy[l  , l+k] = -0.17
@@ -32,8 +31,14 @@ for l=1:p-k
 end
 Δ = Ωx - Ωy
 
-Σx = inv(Symmetric(Ωx))
-Σy = inv(Symmetric(Ωy))
+d = Vector{Float64}(undef, p)
+rand!(Uniform(0.5, 2.5), d)
+d .= sqrt.(d)
+D = Diagonal(d)
+Σx = inv(Symmetric(D * Ωx * D))
+Σy = inv(Symmetric(D * Ωy * D))
+
+tΔ = D * Δ * D
 
 dist_X = MvNormal(convert(Matrix, Σx))
 dist_Y = MvNormal(convert(Matrix, Σy))
