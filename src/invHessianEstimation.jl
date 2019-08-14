@@ -282,3 +282,145 @@ function invAsymHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ
 
     return x
 end
+
+
+
+############################################
+#
+#   compressed version of invHessian
+#
+############################################
+
+function _mul_symX_S(θ::SparseIterate, S::Symmetric)
+    p = size(S, 1)
+    rp = length(θ)
+    _c = 1. / sqrt(2.)
+
+    out = zeros(p, p)
+
+    i = 1
+    @inbounds while i <= θ.nnz
+      v = A.nzval[i]
+      ind = A.nzval2ind[i]
+      r, c = ind2subLowerTriangular(p, ind)
+      if r == c
+          for l=1:p
+              @inbounds out[r, l] += S[c, l] * v
+          end
+      else
+          for l=1:p
+              t = (S[c, l] + S[r, l]) * v * _c
+              @inbounds out[r, l] += t
+              @inbounds out[c, l] += t
+          end
+      end
+      i += 1
+    end
+    out
+end
+
+
+function _computeReducedVar!(ω, f::CDInverseReducedSymKroneckerLoss, X, Y, Θ)
+    nx, p = size(X)
+    ny    = size(Y, 1)
+
+    q = zeros(nx)
+    r = zeros(ny)
+
+    A = f.A
+    ind = f.ind
+    _c = 1. / sqrt(2.)
+
+    θSx = _mul(Θ, f.Σx)
+    ΘSy = _mul(Θ, f.Σy)
+
+    V = X * θSy
+    W = Y * θSx
+
+    j = 0
+    for col=1:p
+        for row=col:p
+            j += 1
+
+            δ = ind == j ? - 1. : 0.
+
+            fill!(q, 0.)
+            fill!(r, 0.)
+            t = 0.
+
+            if row == col
+                @inbounds t = A[row, row] + δ
+
+                for k=1:nx
+                    @inbounds q[k] = X[k, row] * V[k, row] + δ
+                end
+                for k=1:ny
+                    @inbounds r[k] = Y[k, row] * W[k, row] + δ
+                end
+            else
+                t = (A[row, col] + A[col, row]) * _c + δ
+
+                for k=1:nx
+                    @inbounds q[k] = (X[k, row] * V[k, col] + X[k, col] * V[k, row]) * _c  + δ
+                end
+                for k=1:ny
+                    @inbounds r[k] = (Y[k, row] * W[k, col] + Y[k, col] * W[k, row]) * _c + δ
+                end
+            end
+
+            σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
+            σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t^2
+
+            ω[j] = sqrt((σ1/nx + σ2/ny))
+        end
+    end
+
+end
+
+function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDOptions())
+    nx, p = size(X)
+    ny = size(Y, 1)
+
+    rp = div((p+1)*p, 2)
+    f = CDInverseReducedSymKroneckerLoss(Sx, Sy, ind)
+    x = SparseIterate(rp)
+    x[ind] = 1.
+    CoordinateDescent.initialize!(f, x)
+
+    ##################
+    #
+    #  first stage
+    #
+    ##################
+    # compute initial variance
+    ω = Array{eltype(Sx)}(undef, length(x))
+    _computeReducedVar!(ω, f, X, Y, x)
+    ω[ind] = 0.
+
+    # compute initial estimate
+    g = ProxL1(λ, ω)
+    coordinateDescent!(x, f, g, options)
+
+    ##################
+    #
+    #  second stage
+    #
+    ##################
+
+    # recompute variance
+    opt1 = CDOptions(;
+        maxIter=options.maxIter,
+        optTol=options.optTol,
+        randomize=options.randomize,
+        warmStart=true,
+        numSteps=options.numSteps)
+
+    _computeReducedVar!(ω, f, X, Y, x)
+    ω[ind] = 0.
+
+    # recompute estimate
+    g = ProxL1(λ, ω)
+    coordinateDescent!(x, f, g, opt1)
+
+    return x
+end

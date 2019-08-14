@@ -9,7 +9,7 @@ using Plots
 
 dir = "/home/mkolar/.julia/dev/DiffPrecTest/exper/sim5/sim5a"
 
-p = 30
+p = 100
 n = 300
 
 # generate model
@@ -37,9 +37,9 @@ end
 dist_X = MvNormal(convert(Matrix, Σx))
 dist_Y = MvNormal(convert(Matrix, Σy))
 
-τArr = collect( range(10,0,length=100) )
+τArr = collect( range(10,0,length=500) )
 
-NUM_REP=100
+NUM_REP=112
 FPR_mine = zeros(NUM_REP, length(τArr))
 TPR_mine = zeros(NUM_REP, length(τArr))
 FPR_tr = zeros(NUM_REP, 50)
@@ -48,21 +48,21 @@ TPR_tr = zeros(NUM_REP, 50)
 for rep=1:NUM_REP
     global FPR_mine, TPR_mine, FPR_tr, TPR_tr, Δ, τArr
     fname = "$(dir)/res_$(rep).jld"
-    @show rep
 
-    # generate data
-    Random.seed!(2345 + rep)
-    X = rand(dist_X, n)'
-    Y = rand(dist_Y, n)'
-    Xtest = rand(dist_X, n)'    # validation data for
-    Ytest = rand(dist_Y, n)'
+    # # generate data
+    # Random.seed!(2345 + rep)
+    # X = rand(dist_X, n)'
+    # Y = rand(dist_Y, n)'
+    # Xtest = rand(dist_X, n)'    # validation data for
+    # Ytest = rand(dist_Y, n)'
 
     file = jldopen(fname, "r")
-    eS = read(file, "eS")
+    # eS = read(file, "eS")
+    eΔNormal = read(file, "eΔNormal")
     eΔDTr = read(file, "eΔDTr")
     close(file)
 
-    @time eΔNormal, _, _ = supportEstimate(ANTSupport(), X, Y, τArr; estimSupport=eS)
+    # @time eΔNormal, _, _ = supportEstimate(ANTSupport(), X, Y, τArr; estimSupport=eS)
     for j=1:length(τArr)
         confusionMatrix = CovSel.getConfusionMatrix(Δ, eΔNormal[j])
         FPR_mine[rep, j] = CovSel.fpr(confusionMatrix)
@@ -76,10 +76,17 @@ for rep=1:NUM_REP
     end
 end
 
+pyplot()
+plot(mean(FPR_mine, dims=1)', mean(TPR_mine, dims=1)')
+plot!(mean(FPR_tr, dims=1)', mean(TPR_tr, dims=1)')
 
 
-
-
+plot(FPR_mine[1, :], TPR_mine[1, :])
+FPR_mine[1, :]
+rep = 1
+fname = "$(dir)/res_$(rep).jld"
+file = jldopen(fname, "r")
+eΔNormal = read(file, "eΔNormal")
 
 
 # using JLD
