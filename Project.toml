@@ -4,11 +4,11 @@ author = ["Mladen Kolar <mkolar@chicagobooth.edu>"]
 version = "0.1.0"
 
 [deps]
-CoordinateDescent = "af3e6e94-ae3f-11e8-2d74-f149f5661110"
+CoordinateDescent = "c00ed354-b9be-54b8-8a23-c5ac771bc43a"
 CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-ProximalBase = "e46f183a-ae2f-11e8-253c-bfe2254e1c56"
+ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
