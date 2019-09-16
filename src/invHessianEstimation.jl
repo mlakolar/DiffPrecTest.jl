@@ -595,8 +595,8 @@ function _mul_symX_S(θ::SparseIterate, S::Symmetric)
 
     i = 1
     @inbounds while i <= θ.nnz
-      v = A.nzval[i]
-      ind = A.nzval2ind[i]
+      v = θ.nzval[i]
+      ind = θ.nzval2ind[i]
       r, c = ind2subLowerTriangular(p, ind)
       if r == c
           for l=1:p
@@ -626,11 +626,11 @@ function _computeReducedVar!(ω, f::CDInverseReducedSymKroneckerLoss, X, Y, Θ)
     ind = f.ind
     _c = 1. / sqrt(2.)
 
-    θSx = _mul(Θ, f.Σx)
-    ΘSy = _mul(Θ, f.Σy)
+    ΘSx = _mul_symX_S(Θ, f.Σx)
+    ΘSy = _mul_symX_S(Θ, f.Σy)
 
-    V = X * θSy
-    W = Y * θSx
+    V = X * ΘSy
+    W = Y * ΘSx
 
     j = 0
     for col=1:p
