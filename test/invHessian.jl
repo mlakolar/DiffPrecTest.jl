@@ -120,33 +120,33 @@ end
   end
 end
 
-@testset "invert reduced SymKroneker" begin
-  for rep=1:50
-    p = 20
-    hSx, hSy = genData(p)
-    A = (kron(hSy, hSx) + kron(hSx, hSy)) / 2.
-
-    λ = rand(Uniform(0.05, 0.3))
-    g = ProximalBase.ProxL1(λ)
-
-    for i = [(1,1), (3,1), (4,5)]
-      ri = i[1]
-      ci = i[2]
-      x = ProximalBase.SparseIterate(p*p)
-      x1 = ProximalBase.SparseIterate(p*p)
-
-      f = CovSel.CDInverseSymKroneckerLoss(Symmetric(hSx), Symmetric(hSy), ri, ci)
-      b = zeros(Float64, p*p)
-      b[(ci-1)*p+ri] = -1.
-
-      f1 = CoordinateDescent.CDQuadraticLoss(A, b)
-      CoordinateDescent.coordinateDescent!(x, f, g, CoordinateDescent.CDOptions(;maxIter=5000, optTol=1e-12))
-      CoordinateDescent.coordinateDescent!(x1, f1, g, CoordinateDescent.CDOptions(;maxIter=5000, optTol=1e-12))
-
-      @test convert(Vector, x) ≈ convert(Vector, x1) atol=1e-7
-    end
-  end
-end
+# @testset "invert reduced SymKroneker" begin
+#   for rep=1:50
+#     p = 20
+#     hSx, hSy = genData(p)
+#     A = (kron(hSy, hSx) + kron(hSx, hSy)) / 2.
+#
+#     λ = rand(Uniform(0.05, 0.3))
+#     g = ProximalBase.ProxL1(λ)
+#
+#     for i = [(1,1), (3,1), (4,5)]
+#       ri = i[1]
+#       ci = i[2]
+#       x = ProximalBase.SparseIterate(p*p)
+#       x1 = ProximalBase.SparseIterate(p*p)
+#
+#       f = CovSel.CDInverseSymKroneckerLoss(Symmetric(hSx), Symmetric(hSy), ri, ci)
+#       b = zeros(Float64, p*p)
+#       b[(ci-1)*p+ri] = -1.
+#
+#       f1 = CoordinateDescent.CDQuadraticLoss(A, b)
+#       CoordinateDescent.coordinateDescent!(x, f, g, CoordinateDescent.CDOptions(;maxIter=5000, optTol=1e-12))
+#       CoordinateDescent.coordinateDescent!(x1, f1, g, CoordinateDescent.CDOptions(;maxIter=5000, optTol=1e-12))
+#
+#       @test convert(Vector, x) ≈ convert(Vector, x1) atol=1e-7
+#     end
+#   end
+# end
 
 
 

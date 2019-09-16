@@ -14,10 +14,16 @@ n = 300
 est      = Array{Any}(undef, 9)   # number of methods
 
 
-rep   = parse(Int,ARGS[1])
-ip    = parse(Int,ARGS[2])
-iElem = parse(Int,ARGS[3])
-dir = ARGS[4]
+# rep   = parse(Int,ARGS[1])
+# ip    = parse(Int,ARGS[2])
+# iElem = parse(Int,ARGS[3])
+# dir = ARGS[4]
+
+rep   = 1
+ip    = 1
+iElem = 1
+dir = "."
+
 
 Random.seed!(134)
 

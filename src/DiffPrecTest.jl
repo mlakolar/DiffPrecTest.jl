@@ -25,7 +25,7 @@ export
   diffEstimation, invHessianEstimation, invAsymHessianEstimation,
 
   # support estimation
-  CDInverseKroneckerLoss, CDInverseSymKroneckerLoss, CDInverseReducedSymKroneckerLoss, 
+  CDInverseKroneckerLoss, CDInverseSymKroneckerLoss, CDInverseReducedSymKroneckerLoss,
   ANTSupport,
   BootStdSupport,
   BootMaxSupport,
@@ -108,7 +108,7 @@ function estimate(::SymmetricNormal, X, Y, row, col;
       Sx = Symmetric( X'X / nx )
   end
   if Sy === nothing
-      Sy = Symmetric( Y'Y / ny)
+      Sy = Symmetric( Y'Y / ny )
   end
 
   # first stage
@@ -123,7 +123,9 @@ function estimate(::SymmetricNormal, X, Y, row, col;
 
   # second stage
   if ω === nothing && suppω === nothing
-      ω = invHessianEstimation(Sx, Sy, row, col, X, Y, λ)
+      # ω = invHessianEstimation(Sx, Sy, row, col, X, Y, λ)
+      j = sub2indLowerTriangular(p, row, col)
+      ω = invQSymHessian(Sx, Sy, j, X, Y, λ)
       suppω = getSupport(ω, p)
   end
   if suppω === nothing
