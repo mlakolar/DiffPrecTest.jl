@@ -25,6 +25,7 @@ export
   diffEstimation, invHessianEstimation, invAsymHessianEstimation,
 
   # support estimation
+  CDInverseKroneckerLoss, CDInverseSymKroneckerLoss, CDInverseReducedSymKroneckerLoss, 
   ANTSupport,
   BootStdSupport,
   BootMaxSupport,

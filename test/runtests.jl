@@ -1,6 +1,7 @@
 tests = [
   "util",
-  "variance"
+  "variance",
+  "invHessian"
 ]
 
 for t in tests
