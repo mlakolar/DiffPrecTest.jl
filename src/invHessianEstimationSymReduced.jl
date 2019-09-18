@@ -140,9 +140,9 @@ function _mul_symX_S(θ::SparseIterate, S::Symmetric)
           end
       else
           for l=1:p
-              t = (S[c, l] + S[r, l]) * v * _c
-              @inbounds out[r, l] += t
-              @inbounds out[c, l] += t
+              t = v * _c
+              @inbounds out[r, l] += t * S[c, l]
+              @inbounds out[c, l] += t * S[r, l]
           end
       end
       i += 1
