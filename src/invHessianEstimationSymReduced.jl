@@ -189,7 +189,7 @@ function _computeReducedVar!(ω, f::CDInverseReducedSymKroneckerLoss, X, Y, Θ)
                     @inbounds r[k] = Y[k, row] * W[k, row] + δ
                 end
             else
-                t = (A[row, col] + A[col, row]) * _c + δ
+                @inbounds t = (A[row, col] + A[col, row]) * _c + δ
 
                 for k=1:nx
                     @inbounds q[k] = (X[k, row] * V[k, col] + X[k, col] * V[k, row]) * _c  + δ
@@ -218,7 +218,7 @@ function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDO
     x[ind] = 1.
     CoordinateDescent.initialize!(f, x)
 
-    ##################
+    ##################0
     #
     #  first stage
     #
