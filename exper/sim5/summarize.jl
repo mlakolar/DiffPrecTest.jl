@@ -9,27 +9,47 @@ using Plots
 
 dir = "/home/mkolar/.julia/dev/DiffPrecTest/exper/sim5/sim5a"
 
-p = 100
+p = 20
 n = 300
 
 # generate model
 Ωx = Matrix{Float64}(I, p, p)
-ρ = 0.3
-for k=1:p-1
-    for l=1:p-k
-        Ωx[l  , l+k] = ρ^k
-        Ωx[l+k, l  ] = ρ^k
+mf = [1., 0.5, 0.4]
+# block 1
+α = 1.
+bp = 1
+ep = 10
+for k=0:2
+    v = α * mf[k+1]
+    for l=bp:ep-k
+        Ωx[l  , l+k] = v
+        Ωx[l+k, l  ] = v
     end
 end
-
-Ωy = copy(Ωx)
-k = 2
-for l=1:p-k
-    Ωy[l  , l+k] = -0.17
-    Ωy[l+k, l  ] = -0.17
+# block 2
+α = 2.
+bp = 11
+ep = 15
+for k=0:2
+    v = α * mf[k+1]
+    for l=bp:ep-k
+        Ωx[l  , l+k] = v
+        Ωx[l+k, l  ] = v
+    end
 end
+# block 3
+α = 4.
+bp = 16
+ep = 20
+for k=0:2
+    v = α * mf[k+1]
+    for l=bp:ep-k
+        Ωx[l  , l+k] = v
+        Ωx[l+k, l  ] = v
+    end
+end
+Ωy = Matrix(Diagonal(Ωx))
 Δ = Ωx - Ωy
-
 
 Σx = inv(Symmetric(Ωx))
 Σy = inv(Symmetric(Ωy))
@@ -37,9 +57,12 @@ end
 dist_X = MvNormal(convert(Matrix, Σx))
 dist_Y = MvNormal(convert(Matrix, Σy))
 
+
 τArr = collect( range(10,0,length=500) )
 
-NUM_REP=112
+
+
+NUM_REP=100
 FPR_mine = zeros(NUM_REP, length(τArr))
 TPR_mine = zeros(NUM_REP, length(τArr))
 FPR_tr = zeros(NUM_REP, 50)
@@ -49,20 +72,11 @@ for rep=1:NUM_REP
     global FPR_mine, TPR_mine, FPR_tr, TPR_tr, Δ, τArr
     fname = "$(dir)/res_$(rep).jld"
 
-    # # generate data
-    # Random.seed!(2345 + rep)
-    # X = rand(dist_X, n)'
-    # Y = rand(dist_Y, n)'
-    # Xtest = rand(dist_X, n)'    # validation data for
-    # Ytest = rand(dist_Y, n)'
-
     file = jldopen(fname, "r")
-    # eS = read(file, "eS")
     eΔNormal = read(file, "eΔNormal")
     eΔDTr = read(file, "eΔDTr")
     close(file)
 
-    # @time eΔNormal, _, _ = supportEstimate(ANTSupport(), X, Y, τArr; estimSupport=eS)
     for j=1:length(τArr)
         confusionMatrix = CovSel.getConfusionMatrix(Δ, eΔNormal[j])
         FPR_mine[rep, j] = CovSel.fpr(confusionMatrix)

@@ -8,37 +8,50 @@ using JLD
 rep   = parse(Int,ARGS[1])
 dir = ARGS[2]
 
-@show gethostname()
-
-p = 100
+p = 20
 n = 300
 
 # generate model
 Ωx = Matrix{Float64}(I, p, p)
-ρ = 0.3
-for k=1:p-1
-    for l=1:p-k
-        Ωx[l  , l+k] = ρ^k
-        Ωx[l+k, l  ] = ρ^k
+mf = [1., 0.5, 0.4]
+# block 1
+α = 1.
+bp = 1
+ep = 10
+for k=0:2
+    v = α * mf[k+1]
+    for l=bp:ep-k
+        Ωx[l  , l+k] = v
+        Ωx[l+k, l  ] = v
     end
 end
-
-Ωy = copy(Ωx)
-k = 2
-for l=1:p-k
-    Ωy[l  , l+k] = -0.17
-    Ωy[l+k, l  ] = -0.17
+# block 2
+α = 2.
+bp = 11
+ep = 15
+for k=0:2
+    v = α * mf[k+1]
+    for l=bp:ep-k
+        Ωx[l  , l+k] = v
+        Ωx[l+k, l  ] = v
+    end
 end
+# block 3
+α = 4.
+bp = 16
+ep = 20
+for k=0:2
+    v = α * mf[k+1]
+    for l=bp:ep-k
+        Ωx[l  , l+k] = v
+        Ωx[l+k, l  ] = v
+    end
+end
+Ωy = Matrix(Diagonal(Ωx))
 Δ = Ωx - Ωy
 
-d = Vector{Float64}(undef, p)
-rand!(Uniform(0.5, 2.5), d)
-d .= sqrt.(d)
-D = Diagonal(d)
-Σx = inv(Symmetric(D * Ωx * D))
-Σy = inv(Symmetric(D * Ωy * D))
-
-tΔ = D * Δ * D
+Σx = inv(Symmetric(Ωx))
+Σy = inv(Symmetric(Ωy))
 
 dist_X = MvNormal(convert(Matrix, Σx))
 dist_Y = MvNormal(convert(Matrix, Σy))
