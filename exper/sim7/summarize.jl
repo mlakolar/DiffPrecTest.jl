@@ -3,8 +3,9 @@ using DiffPrecTest
 using DataFrames, CSV
 using Random, LinearAlgebra, Distributions
 
+
+elemArr = [(5,5), (8, 7), (50, 25), (22, 20), (32, 30)]
 pArr = [100, 200]
-elemArr = [(5,5), (8, 7), (50, 25), (21, 20), (30, 30)]
 methodArr = ["Sym-N", "Asym-N", "YinXia", "Sym-B", "Asym-B", "O-Sym-N", "O-Asym-N", "O-Sym-B", "O-Asym-B"]
 
 df = DataFrame(p = Int[], row = Int[], col = Int[], trueValue=Float64[], method=String[], bias=Float64[], coverage=Float64[], lenCI=Float64[])

@@ -4,11 +4,16 @@
 ##   sbatch --job-name=diff_sim2_${1}_${2} sbatch_sim2
 
 #SBATCH --ntasks=28
-#SBATCH --partition=standard
-#SBATCH --time=7-00:00:00
+#SBATCH --partition=broadwl
+#SBATCH --time=1-12:00:00
 #SBATCH --exclusive
 
-mkdir -p /scratch/mkolar/diffTest/sim2
-mkdir -p /scratch/mkolar/output/sim2
+module load parallel
+module load hdf5
 
-parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=/scratch/mkolar/output/sim2/$SLURM_JOB_NAME.err.{1} --output=/scratch/mkolar/output/sim2/$SLURM_JOB_NAME.out.{1} /home/mkolar/mkolar_space/julia-1.1.1/bin/julia sim2.jl {1} ${1} ${2} /scratch/mkolar/diffTest/sim2 ::: {1..1000}
+SCRATCH_PATH=/scratch/midway2/mkolar
+
+mkdir -p $SCRATCH_PATH/diffTest/sim2
+mkdir -p $SCRATCH_PATH/output/sim2
+
+parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$SCRATCH_PATH/output/sim2/$SLURM_JOB_NAME.err.{1} --output=$SCRATCH_PATH/output/sim2/$SLURM_JOB_NAME.out.{1} /home/mkolar/project-midway/julia-1.1.1/bin/julia sim2.jl {1} ${1} ${2} $SCRATCH_PATH/diffTest/sim2 ::: {1..1000}

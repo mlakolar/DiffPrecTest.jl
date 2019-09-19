@@ -8,7 +8,7 @@ using JLD
 
 @show gethostname()
 
-pArr = [25, 100, 200]
+pArr = [100, 200]
 elemArr = [(5,5), (8, 7), (50, 25)]
 n = 300
 est      = Array{Any}(undef, 9)   # number of methods

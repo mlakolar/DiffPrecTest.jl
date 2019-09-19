@@ -14,7 +14,7 @@ iElem = parse(Int,ARGS[3])
 dir = ARGS[4]
 
 pArr = [100, 200]
-elemArr = [(5,5), (8, 7), (50, 25), (21, 20), (30, 30)]
+elemArr = [(5,5), (8, 7), (50, 25), (22, 20), (32, 30)]
 n = 300
 est      = Array{Any}(undef, 9)   # number of methods
 
