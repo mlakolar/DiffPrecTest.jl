@@ -22,10 +22,10 @@ export
   computeSimulationResult,
 
   # first and second stage functions
-  diffEstimation, invHessianEstimation, invAsymHessianEstimation,
+  diffEstimation, invAsymHessianEstimation, invQSymHessian,
 
   # support estimation
-  CDInverseKroneckerLoss, CDInverseSymKroneckerLoss, CDInverseReducedSymKroneckerLoss,
+  CDInverseKroneckerLoss, CDInverseReducedSymKroneckerLoss,
   ANTSupport,
   BootStdSupport,
   BootMaxSupport,

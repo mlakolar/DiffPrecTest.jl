@@ -1,5 +1,4 @@
 
-include("invHessianEstimationSym.jl")
 include("invHessianEstimationASym.jl")
 include("invHessianEstimationSymReduced.jl")
 

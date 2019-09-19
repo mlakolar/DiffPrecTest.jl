@@ -135,8 +135,6 @@ function getSupport(x::SymmetricSparseIterate, τ::Float64=1e-3)
           if abs(x[ri, ci] > τ)
               S[ri, ci] = true
               S[ci, ri] = true
-              # S[ri, ri] = true
-              # S[ci, ci] = true
           end
       end
   end
@@ -152,8 +150,6 @@ function getSupport(x::SparseIterate, p::Int, τ::Float64=1e-3)
           if abs(x[ind] > τ)
               S[ri, ci] = true
               S[ci, ri] = true
-              # S[ri, ri] = true
-              # S[ci, ci] = true
           end
       end
   end

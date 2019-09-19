@@ -28,7 +28,8 @@ function __initSupport(
     ind = 0
     for ci=1:p
         for ri=ci:p
-            x2 = invHessianEstimation(Sx, Sy, ri, ci, X, Y, λ)
+            j = sub2indLowerTriangular(p, ri, ci)
+            x2 = invQSymHessian(Sx, Sy, j, X, Y, λ)
             S2 = getSupport(x2, p)
             ind = ind + 1
             estimSupp[ind] = S1 .| S2
