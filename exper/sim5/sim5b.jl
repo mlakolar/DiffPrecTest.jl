@@ -8,7 +8,7 @@ using JLD
 rep   = parse(Int,ARGS[1])
 dir = ARGS[2]
 
-p = 60
+p = 100
 n = 300
 
 # generate model
@@ -17,7 +17,7 @@ mf = [1., 0.5, 0.4]
 # block 1
 α = 1.
 bp = 1
-ep = 30
+ep = 50
 for k=0:2
     v = α * mf[k+1]
     for l=bp:ep-k
@@ -27,8 +27,8 @@ for k=0:2
 end
 # block 2
 α = 2.
-bp = 31
-ep = 45
+bp = 51
+ep = 75
 for k=0:2
     v = α * mf[k+1]
     for l=bp:ep-k
@@ -38,8 +38,8 @@ for k=0:2
 end
 # block 3
 α = 4.
-bp = 46
-ep = 60
+bp = 76
+ep = 100
 for k=0:2
     v = α * mf[k+1]
     for l=bp:ep-k

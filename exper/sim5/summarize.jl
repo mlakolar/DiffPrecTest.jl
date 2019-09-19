@@ -7,7 +7,7 @@ using Random, LinearAlgebra, Distributions, SparseArrays, Statistics
 using CovSel
 using Plots
 
-dir = "/home/mkolar/.julia/dev/DiffPrecTest/exper/sim5/sim5a"
+dir = "/home/mkolar/.julia/dev/DiffPrecTest/exper/sim5/res"
 
 p = 20
 n = 300
@@ -62,7 +62,7 @@ dist_Y = MvNormal(convert(Matrix, Σy))
 
 
 
-NUM_REP=100
+NUM_REP=200
 FPR_mine = zeros(NUM_REP, length(τArr))
 TPR_mine = zeros(NUM_REP, length(τArr))
 FPR_tr = zeros(NUM_REP, 50)
