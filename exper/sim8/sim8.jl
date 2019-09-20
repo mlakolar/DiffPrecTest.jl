@@ -14,7 +14,6 @@ dir = ARGS[3]
 
 pArr = [25, 50, 100, 150]
 n = 300
-est      = Array{Any}(undef, 9)   # number of methods
 
 p = pArr[ip]
 Random.seed!(54298)
