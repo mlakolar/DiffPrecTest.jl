@@ -85,7 +85,7 @@ function __getΔ(::ANTSupport, X, Y; estimSupport::Union{Array{BitArray},Nothing
     Sx = Symmetric( cov(X) )
     Sy = Symmetric( cov(Y) )
 
-    @time eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
+    eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
     Δpoint = Array{DiffPrecResultNormal}(undef, div((p+1)*p, 2))
 
     it = 0

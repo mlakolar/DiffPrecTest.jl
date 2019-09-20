@@ -30,7 +30,13 @@ export
   BootStdSupport,
   BootMaxSupport,
   DTraceValidationSupport,
-  supportEstimate
+  supportEstimate,
+
+  # bootstrap
+  BootstrapEstimates,
+  bootstrap,
+  simulCI, simulCIstudentized
+
 
 
 
@@ -78,6 +84,9 @@ struct SimulationResult
   p_var::Float64
 end
 
+
+
+
 ########################################
 
 include("support.jl")
@@ -85,7 +94,7 @@ include("variance.jl")
 include("diffEstimation.jl")
 include("invHessianEstimation.jl")
 include("util.jl")
-
+include("bootstrap.jl")
 
 
 ##############################
@@ -125,7 +134,6 @@ function estimate(::SymmetricNormal, X, Y, row, col;
 
   # second stage
   if ω === nothing && suppω === nothing
-      # ω = invHessianEstimation(Sx, Sy, row, col, X, Y, λ)
       j = sub2indLowerTriangular(p, row, col)
       ω = invQSymHessian(Sx, Sy, j, X, Y, λ)
       suppω = getSupport(ω, p)
@@ -437,6 +445,9 @@ function estimate(
 
   DiffPrecResultNormal(Δab, sqrt(v))
 end
+
+
+
 
 
 
