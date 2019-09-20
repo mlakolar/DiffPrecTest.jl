@@ -226,7 +226,11 @@ function computeSimulationResult(res::Vector{DiffPrecResultNormal}, trueParam::F
 
   bias = Eestim / num_rep - trueParam
 
-  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep)
+  ep = [res[rep].p for rep=1:num_rep]
+  mean_p = mean(ep)
+  var_p = var(ep)
+
+  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep, mean_p, var_p)
 end
 
 function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Float64, α::Float64=0.05)
@@ -250,5 +254,10 @@ function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Flo
 
   bias = Eestim / num_rep - trueParam
 
-  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep)
+  ep = [res[rep].p for rep=1:num_rep]
+  mean_p = mean(ep)
+  var_p = var(ep)
+
+
+  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep, mean_p, var_p)
 end

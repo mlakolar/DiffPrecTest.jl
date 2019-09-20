@@ -74,6 +74,8 @@ struct SimulationResult
   bias::Float64
   coverage::Float64
   lenCoverage::Float64
+  p_mean::Float64
+  p_var::Float64
 end
 
 ########################################
