@@ -11,11 +11,13 @@ module load parallel
 module load hdf5
 
 SCRATCH_PATH=/scratch/midway2/mkolar
-TMPOUT=$SCRATCH_PATH/output/sim10
-OUT=$SCRATCH_PATH/diffTest/sim10
+TMPOUT=$SCRATCH_PATH/output/sim10_o
+OUT=$SCRATCH_PATH/diffTest/sim10_o
+JULIA_PATH=/home/mkolar/project-midway/julia-1.1.1/bin/julia
+FNAME=sim10_o.jl
 
 mkdir -p $OUT
 mkdir -p $TMPOUT
 
 
-parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$TMPOUT/$SLURM_JOB_NAME.err.{1} --output=$TMPOUT/$SLURM_JOB_NAME.out.{1} /home/mkolar/project-midway/julia-1.1.1/bin/julia sim10.jl {1} ${1} $OUT ::: {1..1000}
+parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$TMPOUT/$SLURM_JOB_NAME.err.{1} --output=$TMPOUT/$SLURM_JOB_NAME.out.{1} $JULIA_PATH $FNAME {1} ${1} $OUT ::: {1..1000}

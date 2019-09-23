@@ -12,7 +12,7 @@ rep   = parse(Int,ARGS[1])
 ip    = parse(Int,ARGS[2])
 dir = ARGS[3]
 
-pArr = [25, 50, 100, 150]
+pArr = [50, 100, 150]
 n = 300
 
 p = pArr[ip]
@@ -47,8 +47,6 @@ Y = rand(dist_X, n)'
 Sx = Symmetric( X'X / n )
 Sy = Symmetric( Y'Y / n )
 
-
-
 eS_init = Array{BitArray}(undef, div((p + 1)*p, 2))
 for j=1:div((p + 1)*p, 2)
     eS_init[j] = falses(p, p)
@@ -56,5 +54,4 @@ end
 
 @time boot_res, eS = bootstrap(X, Y; estimSupport=eS_init)
 
-
-@save "$(dir)/res_$(ip)_$(rep).jld" boot_res eS
+@save "$(dir)/res_$(ip)_$(rep).jld" boot_res

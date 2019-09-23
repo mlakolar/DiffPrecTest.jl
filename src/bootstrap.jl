@@ -11,9 +11,11 @@ function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Array{BitAr
     Sx = Symmetric( cov(X) )
     Sy = Symmetric( cov(Y) )
 
-    @time eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
+    eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
 
     rp = div((p+1)*p, 2)
+    indS = Vector{Vector{Int64}}(undef, rp)
+
     Δhat = Vector{Float64}(undef, rp)
     Δb = Matrix{Float64}(undef, rp, bootSamples)
 
@@ -27,14 +29,14 @@ function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Array{BitAr
      for col=1:p
          for row=col:p
              it = it + 1
-             indS = getLinearSupport(row, col, eS[it])
+             indS[it] = getLinearSupport(row, col, eS[it])
 
-             tmp = estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS)
+             tmp = estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS[it])
              Δhat[it] = tmp.p
          end
      end
 
-    @time for b=1:bootSamples
+    for b=1:bootSamples
         sample!(1:nx, x_ind)
         sample!(1:ny, y_ind)
 
@@ -48,9 +50,8 @@ function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Array{BitAr
         for col=1:p
             for row=col:p
                 it = it + 1
-                indS = getLinearSupport(row, col, eS[it])
 
-                tmp = estimate(SymmetricOracleNormal(), bSx, bSy, bX, bY, row, col, indS)
+                tmp = estimate(SymmetricOracleNormal(), bSx, bSy, bX, bY, row, col, indS[it])
                 Δb[it, b] = tmp.p
             end
         end
