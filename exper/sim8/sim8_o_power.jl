@@ -13,7 +13,7 @@ ip    = parse(Int,ARGS[2])
 ialpha = parse(Int,ARGS[3])
 dir = ARGS[4]
 
-alpha = 0.1:0.1:10
+alpha = 0.1:0.1:1
 pArr = [50, 100, 150]
 n = 300
 
