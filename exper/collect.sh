@@ -78,6 +78,7 @@ jl1 collect_results.jl /scratch/mkolar/diffTest/sim6/res_2_5 sim6_res_2_5
 
 
 
+
 jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_1 sim7_res_1_1
 jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_2 sim7_res_1_2
 jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_3 sim7_res_1_3
@@ -89,3 +90,17 @@ jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_2 sim7_res_2_
 jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_3 sim7_res_2_3
 jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_4 sim7_res_2_4
 jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_5 sim7_res_2_5
+
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_1_1 sim7_res_1_1
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_1_2 sim7_res_1_2
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_1_3 sim7_res_1_3
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_1_4 sim7_res_1_4
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_1_5 sim7_res_1_5
+
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_2_1 sim7_res_2_1
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_2_2 sim7_res_2_2
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_2_3 sim7_res_2_3
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_2_4 sim7_res_2_4
+jl1 collect_results.jl /scratch/mkolar/diffTest/sim7/res_2_5 sim7_res_2_5
+
+

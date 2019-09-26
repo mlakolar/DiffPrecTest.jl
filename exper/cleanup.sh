@@ -13,9 +13,9 @@ rm sim3/*~
 rm sim4/*log
 rm sim4/*out
 rm sim4/*~
-rm sim5/*log
-rm sim5/*out
-rm sim5/*~
+# rm sim5/*log
+# rm sim5/*out
+# rm sim5/*~
 rm sim6/*log
 rm sim6/*out
 rm sim6/*~
