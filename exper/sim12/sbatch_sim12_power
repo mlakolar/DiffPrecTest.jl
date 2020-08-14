@@ -3,23 +3,15 @@
 ## call this file as
 ##   sbatch --job-name=diff_sim1_${1}_${2} sbatch_sim1 dir
 
-##SBATCH --ntasks=200
-##SBATCH --partition=broadwl
-##SBATCH --time=1-12:00:00
-
 #SBATCH --ntasks=28
 #SBATCH --partition=standard
 #SBATCH --time=7-00:00:00
 
-# module load parallel
-# module load hdf5
-
 SCRATCH_PATH=/scratch/mkolar
-TMPOUT=$SCRATCH_PATH/output/sim8_o_power
-OUT=$SCRATCH_PATH/diffTest/sim8_o_power_${1}_${2}
-#JULIA_PATH=/home/mkolar/project-midway/julia-1.1.1/bin/julia
+TMPOUT=$SCRATCH_PATH/output/sim12_o_power_${1}_${2}
+OUT=$SCRATCH_PATH/diffTest/sim12_o_power_${1}_${2}
 JULIA_PATH=/project/mkolar_space/julia-1.1.1/bin/julia
-FNAME=sim8_o_power.jl
+FNAME=sim12_o_power.jl
 
 mkdir -p $OUT
 mkdir -p $TMPOUT
