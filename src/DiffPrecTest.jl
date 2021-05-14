@@ -35,7 +35,8 @@ export
   # bootstrap
   BootstrapEstimates,
   bootstrap,
-  simulCI, simulCIstudentized
+  simulCI, simulCIstudentized,
+  testGlobalNull
 
 
 
