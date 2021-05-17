@@ -3,7 +3,7 @@
 ## call this file as
 ##   sbatch --job-name=diff_sim1_${1}_${2} sbatch_sim1 dir
 
-#SBATCH --ntasks=200
+#SBATCH --ntasks=50
 #SBATCH --partition=broadwl
 #SBATCH --time=1-12:00:00
 
@@ -13,7 +13,7 @@ module load hdf5
 SCRATCH_PATH=/scratch/midway2/mkolar
 TMPOUT=$SCRATCH_PATH/output/sim8_o
 OUT=$SCRATCH_PATH/diffTest/sim8_o
-JULIA_PATH=/home/mkolar/project-midway/julia-1.1.1/bin/julia
+JULIA_PATH=/home/mkolar/project-midway/julia-1.5.0/bin/julia
 FNAME=sim8_o.jl
 
 mkdir -p $OUT

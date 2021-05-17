@@ -10,7 +10,7 @@ using JLD
 # ip    = parse(Int,ARGS[2])
 # dir = ARGS[3]
 
-pArr = [25, 50, 100, 150]
+pArr = [50, 100, 150]
 n = 300
 NUM_REP = 1000
 

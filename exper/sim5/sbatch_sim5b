@@ -4,11 +4,10 @@
 ##   sbatch --job-name=diff_sim1_${1}_${2} sbatch_sim1 dir
 
 
-
-#SBATCH --job-name=diff_sim5b
-#SBATCH --ntasks=100
+#SBATCH --ntasks=50
 #SBATCH --partition=broadwl
 #SBATCH --time=1-12:00:00
+#SBATCH --job-name=diff_sim5b
 ##SBATCH --exclusive
 
 
@@ -16,9 +15,9 @@ module load parallel
 module load hdf5
 
 SCRATCH_PATH=/scratch/midway2/mkolar
-
+JULIA=/project2/mkolar/julia-1.5.0/bin/julia
 
 mkdir -p $SCRATCH_PATH/diffTest/sim5b
 mkdir -p $SCRATCH_PATH/output/sim5b
 
-parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$SCRATCH_PATH/output/sim5b/$SLURM_JOB_NAME.err.{1} --output=$SCRATCH_PATH/output/sim5b/$SLURM_JOB_NAME.out.{1} /home/mkolar/project-midway/julia-1.1.1/bin/julia sim5b.jl {1} ${1} ${2} $SCRATCH_PATH/diffTest/sim5b ::: {1..1000}
+parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$SCRATCH_PATH/output/sim5b/$SLURM_JOB_NAME.err.{1} --output=$SCRATCH_PATH/output/sim5b/$SLURM_JOB_NAME.out.{1} $JULIA sim5b.jl {1} $SCRATCH_PATH/diffTest/sim5b ::: {1..100}

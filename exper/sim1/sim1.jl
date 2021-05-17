@@ -65,4 +65,4 @@ ri, ci = elemArr[iElem]
 @time est[9] = DiffPrecTest.estimate(AsymmetricOracleBoot(), Sx, Sy, X, Y, ri, ci, supportOracle)
 
 
-@save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est eΔ esuppΔ eω esuppω
+@save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est eΔ esuppΔ eω esuppω eSupport

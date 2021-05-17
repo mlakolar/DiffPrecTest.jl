@@ -3,14 +3,21 @@
 ## call this file as
 ##   sbatch --job-name=diff_sim1_${1}_${2} sbatch_sim1 dir
 
-#SBATCH --ntasks=28
+
+#SBATCH --ntasks=50
+#SBATCH --partition=broadwl
+#SBATCH --time=1-12:00:00
 #SBATCH --job-name=diff_sim5a
-#SBATCH --partition=standard
-#SBATCH --time=7-00:00:00
-#SBATCH --exclusive
-#SBATCH --exclude=mcn45
+##SBATCH --exclusive
 
-mkdir -p /scratch/mkolar/diffTest/sim5a
-mkdir -p /scratch/mkolar/output/sim5a
 
-parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=/scratch/mkolar/output/sim5a/$SLURM_JOB_NAME.err.{1} --output=/scratch/mkolar/output/sim5a/$SLURM_JOB_NAME.out.{1} /home/mkolar/mkolar_space/julia-1.1.1/bin/julia sim5a.jl {1} /scratch/mkolar/diffTest/sim5a ::: {1..28}
+SCRATCH=/scratch/midway2/mkolar
+JULIA=/project2/mkolar/julia-1.5.0/bin/julia
+
+
+mkdir -p $SCRATCH/diffTest/sim5a
+mkdir -p $SCRATCH/output/sim5a
+
+module load parallel
+
+parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$SCRATCH/output/sim5a/$SLURM_JOB_NAME.err.{1} --output=$SCRATCH/output/sim5a/$SLURM_JOB_NAME.out.{1} $JULIA sim5a.jl {1} $SCRATCH/diffTest/sim5a ::: {1..100}
