@@ -125,9 +125,6 @@ end
 
 # our method
 function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOptions())
-    nx, p = size(X)
-    ny = size(Y, 1)
-
     f = CDDirectDifferenceLoss(Sx, Sy)
     x = SymmetricSparseIterate(f.p)
 

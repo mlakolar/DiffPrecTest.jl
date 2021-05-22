@@ -156,6 +156,8 @@ function getSupport(x::SparseIterate, p::Int, τ::Float64=1e-3)
   S
 end
 
+getReducedSupport(x::SparseIterate, τ::Float64=1e-3) = abs.(x) .> τ
+
 function getLinearSupport(row::Int, col::Int, S1::BitArray{2}, S2::BitArray{2})
   p = size(S1, 1)
 
@@ -201,6 +203,17 @@ function makeFirst!(supp::Vector{Int64}, p, row, col)
     else
         supp[pos], supp[2] = supp[2], supp[pos]
     end
+  end
+  supp
+end
+
+
+function makeFirst!(supp::Vector{Int64}, indElem)  
+  pos = findfirst(isequal(indElem), supp)
+  if  pos === nothing
+      pushfirst!(supp, indElem)
+  else
+      supp[pos], supp[1] = supp[1], supp[pos]
   end
   supp
 end

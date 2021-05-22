@@ -76,6 +76,78 @@ end
 #
 #     ω'(H Δ - (Sy - Sx))
 #
+# where H = (Sx ⊗ Sy + Sy ⊗ Sx) / 2
+# and ω, Δ are fixed
+function variance(
+  ::ReducedOracleNormal,
+  Sx::Symmetric,
+  Sy::Symmetric,
+  X::AbstractMatrix,
+  Y::AbstractMatrix,
+  ω::Vector,
+  indω::Vector{Int64},
+  Δ::Vector,
+  indΔ::Vector{Int64}
+  )
+
+  nx = size(X, 1)
+  ny = size(Y, 1)
+
+  q = zeros(nx)
+  r = zeros(ny)
+
+  # compute the value of the U-statistics
+  t = 0.
+  for ci=1:length(indΔ)
+    for ri=1:length(indω)
+      @inbounds t += skron(Sx, Sy, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+    end
+  end
+  for ri=1:length(indω)
+    @inbounds t -= ω[ri] * (svec(Sy, indω[ri]) - svec(Sx, indω[ri]))     
+  end
+
+  # compute qk
+  for k=1:nx
+    v = 0.
+    vx = view(X, k, :)
+    for ci=1:length(indΔ)
+      for ri=1:length(indω)
+        @inbounds v += skron(Sy, vx, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+      end
+    end
+    for ri=1:length(indω)          
+      @inbounds v -= ω[ri] * (svec(Sy, indω[ri]) - svec(vx, vx, indω[ri]))
+    end
+    @inbounds q[k] = v
+  end
+
+  # compute rk
+  for k=1:ny
+    v = 0.
+    vy = view(Y, k, :)
+    for ci=1:length(indΔ)
+      for ri=1:length(indω)
+        @inbounds v += skron(Sx, vy, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+      end
+    end
+    for ri=1:length(indω)      
+      @inbounds v -= ω[ri] * (svec(vy, vy, indω[ri]) - svec(Sx, indω[ri]))
+    end
+    @inbounds r[k] = v
+  end
+
+  σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
+  σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t^2
+
+  return σ1/nx + σ2/ny
+end
+
+
+# computes the variance of
+#
+#     ω'(H Δ - (Sy - Sx))
+#
 # where H = Sy ⊗ Sx
 # and ω, Δ are fixed
 function variance(

@@ -17,12 +17,14 @@ export
   SeparateNormal,
   DecorrelatedScoreNormal,
   DecorrelatedScoreOracleNormal,
+  ReducedNormal,
+  ReducedOracleNormal,
   estimate,
   variance,
   computeSimulationResult,
 
   # first and second stage functions
-  diffEstimation, invAsymHessianEstimation, invQSymHessian,
+  diffEstimation, invAsymHessianEstimation, invQSymHessian, invHessianReduced,
 
   # support estimation
   CDInverseKroneckerLoss, CDInverseReducedSymKroneckerLoss,
@@ -61,6 +63,9 @@ struct OneStepRefit <: DiffPrecMethod end        # not implemented yet
 struct DecorrelatedScoreNormal <: DiffPrecMethod end
 struct DecorrelatedScoreOracleNormal <: DiffPrecMethod end
 
+struct ReducedNormal <: DiffPrecMethod end
+struct ReducedOracleNormal <: DiffPrecMethod end
+
 ####################################
 #
 #   different outputs
@@ -90,12 +95,15 @@ end
 
 ########################################
 
+include("skron.jl")
+include("ustats.jl")
 include("support.jl")
 include("variance.jl")
 include("diffEstimation.jl")
 include("invHessianEstimation.jl")
 include("util.jl")
 include("bootstrap.jl")
+include("reducedDiffEstim.jl")
 
 
 ##############################

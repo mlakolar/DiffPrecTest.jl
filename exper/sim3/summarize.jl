@@ -1,10 +1,12 @@
 using JLD
 using DiffPrecTest
-using DataFrames, CSV
+using DataFrames, DataFramesMeta, CSV
 using Statistics, StatsBase, LinearAlgebra
 using SparseArrays
 using Random, Distributions
+using LaTeXStrings, LaTeXTabulars
 
+cd("exper/sim3")
 
 pArr = [100, 200]
 elemArr = [(5,5), (8, 7), (50, 25), (21, 20), (30, 30)]
@@ -12,9 +14,12 @@ methodArr = ["Sym-N", "Asym-N", "YinXia", "Sym-B", "Asym-B", "O-Sym-N", "O-Asym-
 
 df = DataFrame(p = Int[], row = Int[], col = Int[], trueValue=Float64[], method=String[], bias=Float64[], coverage=Float64[], lenCI=Float64[])
 
+trueValue = zeros(Float64, 2, 5)
+
 
 for ip=1:2
   for iElem=1:5
+    global trueValue
 
     p = pArr[ip]
     Random.seed!(1234)
@@ -54,7 +59,9 @@ for ip=1:2
     ri, ci = elemArr[iElem]
     indE = (ci - 1) * p + ri
 
-    res = load("../sim3_res_$(ip)_$(iElem).jld", "results")
+    trueValue[ip, iElem] = tΔ[ri, ci]
+
+    res = load("results/sim3_res_$(ip)_$(iElem).jld", "results")
 
     for j in 1:9
       sr = computeSimulationResult([res[j, i] for i=1:1000], tΔ[indE])
@@ -65,3 +72,47 @@ end
 
 
 CSV.write("sim3.csv", df)
+
+
+
+### create a table 
+
+latex_tabular("sim3_table.tex",
+  Tabular("lllccc"),
+  [
+    Rule(:top),
+    ["", "", "", "Coverage", "Length", L"{\rm Bias} \times 10^3"],
+    Rule(:mid),
+    vcat([ 
+      hcat(
+        (a = fill("", 15, 1); 
+        b = latexstring("p = $(pArr[ip])");
+        a[1] = "\\multirow{15}{*}{$(b)}"; 
+        a
+        ),  
+        vcat([
+          hcat(
+            (a = fill("", 3, 1); 
+            b = latexstring("\\Delta_{$(elemArr[iElem][1]),$(elemArr[iElem][2])} = $(trueValue[ip, iElem])");
+            a[1] = "\\multirow{3}{*}{$(b)}"; 
+            a
+            ),
+            Matrix{Any}(
+              @linq df |>
+              where( (:method .== "Sym-N") .| (:method .== "YinXia") .| (:method .== "O-Sym-N"), 
+                    :p .== pArr[ip], 
+                    :row .== elemArr[iElem][1], :col .== elemArr[iElem][2]) |>  select(:method, 
+                    coverage = convert.(Int, :coverage * 1000), 
+                    lenCI = round.(:lenCI, digits=3), 
+                    bias = round.(:bias * 1000, digits=1))   
+            )
+          ) 
+          for iElem=1:5
+          ]...
+        )
+      )
+      for ip=1:2
+    ]...),
+    Rule(:bottom)
+  ]
+)

@@ -1,7 +1,8 @@
 tests = [
-  "util",
-  "variance",
-  "invHessian"
+  # "util",
+  # "variance",
+  # "invHessian",
+  "skron"
 ]
 
 for t in tests
