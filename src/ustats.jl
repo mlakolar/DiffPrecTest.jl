@@ -3,17 +3,31 @@ abstract type UStatistics end
 ########################################
 
 struct OneSampleUstatistics{N} <: UStatistics
-  h::Function
+  h
 end
 
 struct TwoSampleUstatistics{N, M} <: UStatistics
-  h::Function
+  h
 end
 
 ######################################
 
-function compute(s::OneSampleUstatistics{1}, X::AbstractMatrix)
-  h = s.h
+compute(s::UStatistics, X::AbstractArray) = compute(s, s.h, X)
+compute(s::UStatistics, X::AbstractArray, Y::AbstractArray) = compute(s, s.h, X, Y)
+
+
+function compute(::OneSampleUstatistics{1}, h, X::AbstractVector)
+  v = zero(eltype(X))
+  n = 0
+  for x in X
+    n += 1
+    v += h(x)
+  end
+
+  v / n
+end
+
+function compute(::OneSampleUstatistics{1}, h, X::AbstractMatrix)
   n = size(X, 1)
   v = 0.
   @inbounds for i=1:n
@@ -23,8 +37,20 @@ function compute(s::OneSampleUstatistics{1}, X::AbstractMatrix)
   v / n
 end
 
-function compute(s::OneSampleUstatistics{2}, X::AbstractMatrix)
-  h = s.h
+function compute(::OneSampleUstatistics{2}, h, X::AbstractVector)
+  n = length(X)
+  v = 0.
+  @inbounds for i1=1:n
+    for i2=i1+1:n
+      v += h( X[i1], X[i2] )::Float64
+    end
+  end
+
+  2. * v / (n * (n-1))
+end
+
+
+function compute(::OneSampleUstatistics{2}, h, X::AbstractMatrix)
   n = size(X, 1)
   v = 0.
   @inbounds for i1=1:n
@@ -37,6 +63,18 @@ function compute(s::OneSampleUstatistics{2}, X::AbstractMatrix)
   2. * v / n / (n-1)
 end
 
+function compute(::TwoSampleUstatistics{1, 1}, h, X::AbstractVector, Y::AbstractVector)
+  nx = length(X)
+  ny = length(Y)
+
+  v = 0.
+  for i=1:nx
+    for j=1:ny
+      v += h(X[i], Y[j])
+    end
+  end
+  v / nx / ny
+end
 
 function compute(s::TwoSampleUstatistics{1, 1}, X::AbstractMatrix, Y::AbstractMatrix)
   h = s.h
@@ -54,8 +92,24 @@ end
 
 ######################################
 
-function variance(s::TwoSampleUstatistics{1, 1}, X::AbstractMatrix, Y::AbstractMatrix)
-  h = s.h
+variance(s::UStatistics, X::AbstractArray) = variance(s, s.h, X)
+variance(s::UStatistics, X::AbstractArray, Y::AbstractArray) = variance(s, s.h, X, Y)
+
+function variance(::OneSampleUstatistics{1}, h, X::AbstractVector)
+  n = length(X)
+  q = map(h, X)
+  t = mean(q)
+  (sum(abs2, q) - n * t^2) / (n - 1)
+end
+
+function variance(::OneSampleUstatistics{1}, h, X::AbstractMatrix)
+  n = size(X, 1)
+  q = mapslices(h, X; dims = 2)
+  t = mean(q)
+  (sum(abs2, q) - n * t^2) / (n - 1)
+end
+
+function variance(::TwoSampleUstatistics{1, 1}, h, X::AbstractMatrix, Y::AbstractMatrix)
   nx = size(X, 1)
   ny = size(Y, 1)
 
@@ -90,47 +144,26 @@ end
 
 ### examples 
 
+function createVarianceStatistic()
+  @inline function h(x, y) 
+    (x - y)^2 / 2.    
+  end
+  OneSampleUstatistics{2}(h)
+end
+
 function createCovarianceStatistic(row::Int, col::Int)
-    @inbounds h(X, Y) = (X[row] - Y[row]) * (X[col] - Y[col]) / 2.    
-    OneSampleUstatistics{2}(h)
+  @inline function h(X, Y) 
+      @inbounds (X[row] - Y[row]) * (X[col] - Y[col]) / 2.    
+  end
+  OneSampleUstatistics{2}(h)
+end
+
+function createSecondMomentStatistic()
+  h(X) = X*X
+  OneSampleUstatistics{1}(h)
 end
 
 function createSecondMomentStatistic(row::Int, col::Int)
-    @inbounds h(X) = X[row] * X[col]
-    OneSampleUstatistics{1}(h)
-end
-
-
-function createVarianceReducedEstim(ω, I, Δ, J)
-  function h(x, y)
-    dot( (skron(x, y, I, J) * Δ + svec(x, x, I) - svec(y, y, I)), ω )
-  end
-  TwoSampleUstatistics{1, 1}(h)
-end
-
-
-function createVarianceGrad1(Δ::SparseIterate, rowIndex::Int)
-  function h(x, y)
-    # skron(vx_j, vy_k)[ri, :] * Δ
-    out = 0.
-    for inz = 1:nnz(Δ)
-      indColumn = Δ.nzval2ind[inz]          
-      out += skron(x, y, rowIndex, indColumn) * Δ.nzval[inz]
-    end  
-    out + svec(x, x, rowIndex) - svec(y, y, rowIndex)
-  end
-  TwoSampleUstatistics{1, 1}(h)
-end
-
-function createVarianceGrad2(Δ::SparseIterate, rowIndex::Int, indElem::Int)
-  function h(x, y)
-    # skron(vx_j, vy_k)[ri, :] * Δ
-    out = 0.
-    for inz = 1:nnz(Δ)
-      indColumn = Δ.nzval2ind[inz]          
-      out += skron(x, y, rowIndex, indColumn) * Δ.nzval[inz]
-    end  
-    out + (rowIndex == indElem ? 1. : 0.)
-  end
-  TwoSampleUstatistics{1, 1}(h)
+  @inbounds h(X) = X[row] * X[col]
+  OneSampleUstatistics{1}(h)
 end

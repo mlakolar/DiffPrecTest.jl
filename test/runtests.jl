@@ -2,7 +2,9 @@ tests = [
   # "util",
   # "variance",
   # "invHessian",
-  "skron"
+  "skron",
+  "ustats",
+  "reduced"
 ]
 
 for t in tests

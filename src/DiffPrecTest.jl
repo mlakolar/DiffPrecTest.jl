@@ -20,6 +20,7 @@ export
   ReducedNormal,
   ReducedOracleNormal,
   estimate,
+  compute,
   variance,
   computeSimulationResult,
 
