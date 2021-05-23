@@ -121,6 +121,23 @@ end
 # Q Sx skron yy' Qt
 function skron(
   Sx::Symmetric, 
+  y::AbstractVector,
+  indRow::AbstractVector,
+  indCol::AbstractVector)  
+
+  nRow = length(indRow)
+  nCol = length(indCol)
+  out = zeros( nRow, nCol )
+  for ri=1:nRow
+    for ci=1:nCol
+      out[ri, ci] = skron(Sx, y, indRow[ri], indCol[ci])
+    end    
+  end
+  out
+end
+
+function skron(
+  Sx::Symmetric, 
   y::AbstractVector, 
   ind_row::Int,
   ind_col::Int
