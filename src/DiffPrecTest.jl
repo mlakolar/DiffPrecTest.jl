@@ -135,21 +135,21 @@ function estimate(::SymmetricNormal, X, Y, row, col;
   # first stage
   λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
   if Δ === nothing && suppΔ === nothing
-      Δ = diffEstimation(Sx, Sy, X, Y, λ)
-      suppΔ = getSupport(Δ)
+    Δ = diffEstimation(Sx, Sy, X, Y, λ)
+    suppΔ = getSupport(Δ)
   end
   if suppΔ === nothing
-      suppΔ = getSupport(Δ)
+    suppΔ = getSupport(Δ)
   end
 
   # second stage
   if ω === nothing && suppω === nothing
-      j = sub2indLowerTriangular(p, row, col)
-      ω = invQSymHessian(Sx, Sy, j, X, Y, λ)
-      suppω = getSupport(ω, p)
+    j = sub2indLowerTriangular(p, row, col)
+    ω = invQSymHessian(Sx, Sy, j, X, Y, λ)
+    suppω = getSupport(ω, p)
   end
   if suppω === nothing
-      suppω = getSupport(ω, p)
+    suppω = getSupport(ω, p)
   end
 
   # refit stage

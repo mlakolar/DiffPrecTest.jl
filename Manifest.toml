@@ -77,7 +77,9 @@ version = "0.5.7"
 
 [[CoordinateDescent]]
 deps = ["DataStructures", "LinearAlgebra", "ProximalBase", "SparseArrays", "Statistics"]
-git-tree-sha1 = "bd00a6c0f899a0f8e7f8cac53e78c6f24cbd8080"
+git-tree-sha1 = "08195d515c0eb3b85245ee7b8d99c48b08b288fc"
+repo-rev = "master"
+repo-url = "https://github.com/mlakolar/CoordinateDescent.jl.git"
 uuid = "c00ed354-b9be-54b8-8a23-c5ac771bc43a"
 version = "0.3.0"
 

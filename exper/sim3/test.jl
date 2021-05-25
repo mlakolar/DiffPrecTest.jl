@@ -8,7 +8,7 @@ using JLD
 
 #using Plots
 
-pArr = [5, 200]
+pArr = [13, 200]
 elemArr = [(5,5), (3, 2), (50, 25), (21, 20), (30, 30)]
 n = 300
 est      = Array{Any}(undef, 5)   # number of methods
@@ -77,9 +77,17 @@ Random.seed!(1234)
 X = rand(dist_X, n)'
 Y = rand(dist_Y, n)'
 
-@time res1, _ = DiffPrecTest.estimate(ReducedNormal(), X, Y, indE)
+# Sx = Symmetric(cov(X))
+# Sy = Symmetric(cov(Y))
 
-@time res2, _ = DiffPrecTest.estimate(SymmetricNormal(), X, Y, 3, 2)
+# C = DiffPrecTest.skron(Sx, Sy)
+# b = DiffPrecTest.svec(Sy) - DiffPrecTest.svec(Sx)
+
+# f = CDQuadraticLoss(C, b)
+
+
+@time res1, _ = DiffPrecTest.estimate(ReducedNormal(), X, Y, indE);
+@time res2, _ = DiffPrecTest.estimate(SymmetricNormal(), X, Y, 3, 2);
 
 for rep = 1:1000
   global out
@@ -87,11 +95,12 @@ for rep = 1:1000
   global indE
 
   # generate data
-  Random.seed!(1234 + rep)
+  # Random.seed!(1234 + rep)
   X = rand(dist_X, n)'
   Y = rand(dist_Y, n)'
 
-  #@time out[rep], _, _, _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, ri, ci)
+  #@time out[rep], _, _, _, _, indS = DiffPrecTest.estimate(ReducedNormal(), X, Y, indE)
+  #@time out[rep], _, _, _, _, indS = DiffPrecTest.estimate(SymmetricNormal(), X, Y, 3, 2)
   
   @time out[rep] = DiffPrecTest.estimate(ReducedOracleNormal(), Symmetric(cov(X)), Symmetric(cov(Y)), X, Y, indE, indOracle)
 end
@@ -135,46 +144,8 @@ tmp[1] = 1.
 
 @time variance(DiffPrecTest.createVarianceReducedEstim(ω, indS, Δ, indS), X, Y)
 
-#########################
-# test gradient variance
-
-A = DiffPrecTest.skron(Sx, Sy)
-b = DiffPrecTest.svec(Sx) - DiffPrecTest.svec(Sy)
-
-f = CDQuadraticLoss(A, b)
-x = SparseIterate(size(A, 1))
-
-x[1] = 0.5
-x[10] = -0.3
-x[4] = 2.
-
-@time v = variance(DiffPrecTest.createVarianceGrad1(x, 2), X, Y)
-
-ω = Array{eltype(Sx)}(undef, length(x))
-DiffPrecTest._computeVarStep1!(ω, X, Y, x)
-
-ω[2] - sqrt(v)
 
 
-#########################
-# test gradient variance
 
-indElem = 2
-A = DiffPrecTest.skron(Sx, Sy)
-b = zeros(size(A, 1))
-b[indElem] = 1.
-
-f = CDQuadraticLoss(A, b)
-x = SparseIterate(size(A, 1))
-
-x[1] = 0.5
-x[10] = -0.3
-x[4] = 2.
-
-ω = Array{eltype(Sx)}(undef, length(x))
-DiffPrecTest._computeVarStep2!(ω, indElem, X, Y, x)
-
-ω[1] - sqrt( variance(DiffPrecTest.createVarianceGrad2(x, 1, indElem), X, Y) )
-ω[2] - sqrt( variance(DiffPrecTest.createVarianceGrad2(x, 2, indElem), X, Y) )
 
 

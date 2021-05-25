@@ -85,16 +85,19 @@ end
   p = 10
   m = div(p*(p+1), 2)
   X, Y = generateData(p)
+  n = size(X, 1)
+  Sx = Symmetric( X'X / n )
+  Sy = Symmetric( Y'Y / n )  
   out1 = zeros(m)
   out2 = zeros(m)
 
   θ = SparseIterate(m)
-  DiffPrecTest._computeVarStep1!(out1, X, Y, θ);
+  DiffPrecTest._computeVarStep1!(out1, Sx, Sy, X, Y, θ);
   varStep1Alt!(out2, X, Y, θ);
   @test out1 ≈ sqrt.(out2)
 
   θ .= sprandn(m, 0.5)
-  DiffPrecTest._computeVarStep1!(out1, X, Y, θ);
+  DiffPrecTest._computeVarStep1!(out1, Sx, Sy, X, Y, θ);
   varStep1Alt!(out2, X, Y, θ);
   @test out1 ≈ sqrt.(out2)
 end
@@ -102,18 +105,18 @@ end
 
 @testset "reducedDiffEstimation" begin  
 
-  function reducedDiffEstimationAlt(H::Symmetric, b::Vector, X, Y, λ)
+  function reducedDiffEstimationAlt(H::Symmetric, b::Vector, Sx, Sy, X, Y, λ)
     x = SparseIterate(size(H, 1))
     
     ω = Array{eltype(H)}(undef, length(x))
-    DiffPrecTest._computeVarStep1!(ω, X, Y, x)    
+    DiffPrecTest._computeVarStep1!(ω, Sx, Sy, X, Y, x)    
 
     xtmp = solve_pen_quad(H, b, λ, ω)
     for i=1:length(x)
       x[i] = xtmp[i]
     end
 
-    DiffPrecTest._computeVarStep1!(ω, X, Y, x)
+    DiffPrecTest._computeVarStep1!(ω, Sx, Sy, X, Y, x)
     solve_pen_quad(H, b, λ, ω)
   end
 
@@ -128,8 +131,8 @@ end
 
   λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
 
-  out1 = reducedDiffEstimationAlt(H, b, X, Y, λ)  
-  out2 = DiffPrecTest.reducedDiffEstimation(H, b, X, Y, λ)
+  out1 = reducedDiffEstimationAlt(H, b, Sx, Sy, X, Y, λ)  
+  out2 = DiffPrecTest.reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ)
   
   @test out1 ≈ Vector(out2) atol=1e-4
 end
@@ -160,17 +163,20 @@ end
   p = 10
   m = div(p*(p+1), 2)
   X, Y = generateData(p)
+  n = size(X, 1)
+  Sx = Symmetric( X'X / n )
+  Sy = Symmetric( Y'Y / n )  
   out1 = zeros(m)
   out2 = zeros(m)
 
   for j=1:m
     θ = SparseIterate(m)
-    DiffPrecTest._computeVarStep2!(out1, j, X, Y, θ);
+    DiffPrecTest._computeVarStep2!(out1, j, Sx, Sy, X, Y, θ);
     varStep2Alt!(out2, j, X, Y, θ);
     @test out1 ≈ sqrt.(out2)
 
     θ .= sprandn(m, 0.5)
-    DiffPrecTest._computeVarStep2!(out1, j, X, Y, θ);
+    DiffPrecTest._computeVarStep2!(out1, j, Sx, Sy, X, Y, θ);
     varStep2Alt!(out2, j, X, Y, θ);
     @test out1 ≈ sqrt.(out2)
   end
@@ -178,20 +184,24 @@ end
 
 
 @testset "invHessianReduced" begin  
-  function invHessianReducedAlt(H::Symmetric, indRow, X, Y, λ)
+  function invHessianReducedAlt(H::Symmetric, indRow, Sx, Sy, X, Y, λ)
     x = SparseIterate(size(H, 1))
+    x[indRow] = 1.
+    
     b = zeros(size(H, 1))
     b[indRow] = 1.
 
     ω = Array{eltype(H)}(undef, length(x))
-    DiffPrecTest._computeVarStep2!(ω, indRow, X, Y, x)    
+    DiffPrecTest._computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)    
+    ω[indRow] = 0.
 
     xtmp = solve_pen_quad(H, b, λ, ω)
     for i=1:length(x)
       x[i] = xtmp[i]
     end
 
-    DiffPrecTest._computeVarStep2!(ω, indRow, X, Y, x)
+    DiffPrecTest._computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)
+    ω[indRow] = 0.
     solve_pen_quad(H, b, λ, ω)
   end
 
@@ -207,8 +217,8 @@ end
   λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
 
   for j=1:m
-    out1 = invHessianReducedAlt(H, j, X, Y, λ)  
-    out2 = DiffPrecTest.invHessianReduced(H, j, X, Y, λ)
+    out1 = invHessianReducedAlt(H, j, Sx, Sy, X, Y, λ)  
+    out2 = DiffPrecTest.invHessianReduced(H, j, Sx, Sy, X, Y, λ)
   
     @test out1 ≈ Vector(out2) atol=1e-4
   end

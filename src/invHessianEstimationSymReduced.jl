@@ -215,7 +215,7 @@ function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDO
     rp = div((p+1)*p, 2)
     f = CDInverseReducedSymKroneckerLoss(Sx, Sy, ind)
     x = SparseIterate(rp)
-    x[ind] = 1.
+    x[ind] = 1. / skron(Sx, Sy, ind, ind)
     CoordinateDescent.initialize!(f, x)
 
     ##################0
@@ -226,7 +226,7 @@ function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDO
     # compute initial variance
     ω = Array{eltype(Sx)}(undef, length(x))
     _computeReducedVar!(ω, f, X, Y, x)
-    ω[ind] = 0.
+    ω[ind] = 0.    
 
     # compute initial estimate
     g = ProxL1(λ, ω)

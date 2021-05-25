@@ -39,7 +39,13 @@ end
 
 
 
-function _computeVarStep1!(ω, X, Y, Δ::SparseIterate)
+function _computeVarStep1!(
+  ω, 
+  Sx::Symmetric,
+  Sy::Symmetric,
+  X, 
+  Y, 
+  Δ::SparseIterate)
   nx = size(X, 1)
   ny = size(Y, 1)
 
@@ -52,34 +58,24 @@ function _computeVarStep1!(ω, X, Y, Δ::SparseIterate)
 
     @inbounds for k=1:nx
       vx = view(X, k, :)
-      svec_x_ri = svec(vx, vx, ri)
-      for j=1:ny
-        vy = view(Y, j, :)
-        # skron(vx_k, vy_j)[ri, :] * Δ
-        out = 0.
-        for inz = 1:nnz(Δ)
-          indColumn = Δ.nzval2ind[inz]          
-          out += skron(vx, vy, ri, indColumn) * Δ.nzval[inz]
-        end
-        q[k] += out + svec_x_ri - svec(vy, vy, ri)
+      # skron(Sy, vx_k)[ri, :] * Δ
+      out = 0.
+      for inz = 1:nnz(Δ)
+        indColumn = Δ.nzval2ind[inz]          
+        out += skron(Sy, vx, ri, indColumn) * Δ.nzval[inz]
       end
-      q[k] /= ny
+      q[k] = out + svec(vx, vx, ri) - svec(Sy, ri)
     end
 
     @inbounds for k=1:ny
       vy = view(Y, k, :)
-      svec_y_ri = svec(vy, vy, ri)
-      for j=1:nx
-        vx = view(X, j, :)
-        # skron(vx_j, vy_k)[ri, :] * Δ
-        out = 0.
-        for inz = 1:nnz(Δ)
-          indColumn = Δ.nzval2ind[inz]          
-          out += skron(vx, vy, ri, indColumn) * Δ.nzval[inz]
-        end
-        r[k] += out + svec(vx, vx, ri) - svec_y_ri
+      # skron(Sx, vy_k)[ri, :] * Δ
+      out = 0.
+      for inz = 1:nnz(Δ)
+        indColumn = Δ.nzval2ind[inz]          
+        out += skron(Sx, vy, ri, indColumn) * Δ.nzval[inz]
       end
-      r[k] /= nx
+      r[k] = out + svec(Sx, ri) - svec(vy, vy, ri)
     end
 
     t = mean(q)
@@ -91,11 +87,12 @@ function _computeVarStep1!(ω, X, Y, Δ::SparseIterate)
   end
 end
 
-
-
-
-
-function reducedDiffEstimation(H::Symmetric, b::Vector, X, Y, λ, options=CDOptions())
+function reducedDiffEstimation(
+  H::Symmetric, 
+  b::Vector,   
+  Sx::Symmetric,
+  Sy::Symmetric,
+  X, Y, λ, options=CDOptions())
   f = CDQuadraticLoss(H, b)
   x = SparseIterate(size(H, 1))
 
@@ -106,7 +103,7 @@ function reducedDiffEstimation(H::Symmetric, b::Vector, X, Y, λ, options=CDOpti
   ##################
   # compute initial variance
   ω = Array{eltype(H)}(undef, length(x))
-  _computeVarStep1!(ω, X, Y, x)
+  _computeVarStep1!(ω, Sx, Sy, X, Y, x)
 
   # compute initial estimate
   g = ProxL1(λ, ω)
@@ -126,7 +123,7 @@ function reducedDiffEstimation(H::Symmetric, b::Vector, X, Y, λ, options=CDOpti
       warmStart=true,
       numSteps=options.numSteps)
 
-  _computeVarStep1!(ω, X, Y, x)
+  _computeVarStep1!(ω, Sx, Sy, X, Y, x)
 
   # recompute estimate
   g = ProxL1(λ, ω)
@@ -140,7 +137,14 @@ end
 
 
 
-function _computeVarStep2!(ω, indElem, X, Y, Δ::SparseIterate)
+function _computeVarStep2!(ω, 
+  indElem, 
+  Sx::Symmetric,
+  Sy::Symmetric,
+  X, 
+  Y, 
+  Δ::SparseIterate)
+
   nx = size(X, 1)
   ny = size(Y, 1)
 
@@ -154,33 +158,25 @@ function _computeVarStep2!(ω, indElem, X, Y, Δ::SparseIterate)
     δ = indElem == ri ? - 1. : 0.
 
     @inbounds for k=1:nx
-      vx = view(X, k, :)      
-      for j=1:ny
-        vy = view(Y, j, :)
-        # skron(vx_k, vy_j)[ri, :] * Δ
-        out = 0.
-        for inz = 1:nnz(Δ)
-          indColumn = Δ.nzval2ind[inz]          
-          out += skron(vx, vy, ri, indColumn) * Δ.nzval[inz]
-        end
-        q[k] += out + δ
+      vx = view(X, k, :)    
+      # skron(Sy, vx_k)[ri, :] * Δ
+      out = 0.
+      for inz = 1:nnz(Δ)
+        indColumn = Δ.nzval2ind[inz]          
+        out += skron(Sy, vx, ri, indColumn) * Δ.nzval[inz]
       end
-      q[k] /= ny
+      q[k] = out + δ
     end
 
     @inbounds for k=1:ny
       vy = view(Y, k, :)      
-      for j=1:nx
-        vx = view(X, j, :)
-        # skron(vx_j, vy_k)[ri, :] * Δ
-        out = 0.
-        for inz = 1:nnz(Δ)
-          indColumn = Δ.nzval2ind[inz]          
-          out += skron(vx, vy, ri, indColumn) * Δ.nzval[inz]
-        end
-        r[k] += out + δ
+      # skron(Sx, vy_k)[ri, :] * Δ
+      out = 0.
+      for inz = 1:nnz(Δ)
+        indColumn = Δ.nzval2ind[inz]          
+        out += skron(Sx, vy, ri, indColumn) * Δ.nzval[inz]
       end
-      r[k] /= nx
+      r[k] = out + δ
     end
 
     t = mean(q)
@@ -193,11 +189,20 @@ function _computeVarStep2!(ω, indElem, X, Y, Δ::SparseIterate)
 end
 
 
-function invHessianReduced(H::Symmetric, indRow::Int, X, Y, λ, options=CDOptions())
+function invHessianReduced(H::Symmetric, 
+  indRow::Int, 
+  Sx::Symmetric,
+  Sy::Symmetric,
+  X, 
+  Y, 
+  λ, 
+  options=CDOptions())
+
   b = zeros(size(H, 1))
   b[indRow] = 1.
   f = CDQuadraticLoss(H, b)
   x = SparseIterate(size(H, 1))
+  x[indRow] = 1. / H[indRow, indRow]
 
   ##################
   #
@@ -206,7 +211,8 @@ function invHessianReduced(H::Symmetric, indRow::Int, X, Y, λ, options=CDOption
   ##################
   # compute initial variance
   ω = Array{eltype(H)}(undef, length(x))
-  _computeVarStep2!(ω, indRow, X, Y, x)
+  _computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)
+  ω[indRow] = 0.
 
   # compute initial estimate
   g = ProxL1(λ, ω)
@@ -226,7 +232,8 @@ function invHessianReduced(H::Symmetric, indRow::Int, X, Y, λ, options=CDOption
       warmStart=true,
       numSteps=options.numSteps)
 
-  _computeVarStep2!(ω, indRow, X, Y, x)
+  _computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)
+  ω[indRow] = 0.
 
   # recompute estimate
   g = ProxL1(λ, ω)
@@ -266,7 +273,7 @@ function estimate(::ReducedNormal, X, Y, indElem;
   # first stage
   λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
   if Δ === nothing && suppΔ === nothing
-    Δ = reducedDiffEstimation(H, b, X, Y, λ)
+    Δ = reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ)
     suppΔ = getReducedSupport(Δ)
   end
   if suppΔ === nothing
@@ -275,7 +282,7 @@ function estimate(::ReducedNormal, X, Y, indElem;
 
   # second stage
   if ω === nothing && suppω === nothing    
-    ω = invHessianReduced(H, indElem, X, Y, λ)
+    ω = invHessianReduced(H, indElem, Sx, Sy, X, Y, λ)
     suppω = getReducedSupport(ω)
   end
   if suppω === nothing

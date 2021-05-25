@@ -2,8 +2,8 @@ tests = [
   # "util",
   # "variance",
   # "invHessian",
-  "skron",
-  "ustats",
+  # "skron",
+  # "ustats",
   "reduced"
 ]
 
