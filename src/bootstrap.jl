@@ -1,60 +1,73 @@
 struct BootstrapEstimates
-    Δhat::Vector{Float64}
-    Δb::Matrix{Float64}     # each column represents a bootstrap estimate
+  Δhat::Vector{Float64}
+  Δb::Matrix{Float64}     # each column represents a bootstrap estimate
 end
 
 
-function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Array{BitArray},Nothing}=nothing)
-    nx, p = size(X)
-    ny    = size(Y, 1)
+function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Vector{Vector{Int64}},Nothing}=nothing)
+  nx, p = size(X)
+  ny    = size(Y, 1)
 
-    Sx = Symmetric( cov(X) )
-    Sy = Symmetric( cov(Y) )
+  Sx = Symmetric( cov(X) )
+  Sy = Symmetric( cov(Y) )
 
-    eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
+  eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
 
-    rp = div((p+1)*p, 2)
-    indS = Vector{Vector{Int64}}(undef, rp)
+  rp = div((p+1)*p, 2)
+  # indS = Vector{Vector{Int64}}(undef, rp)
 
-    Δhat = Vector{Float64}(undef, rp)
-    Δb = Matrix{Float64}(undef, rp, bootSamples)
+  Δhat = Vector{Float64}(undef, rp)
+  Δb = Matrix{Float64}(undef, rp, bootSamples)
 
-    bX = similar(X)
-    bY = similar(Y)
-    x_ind = Vector{Int64}(undef, nx)
-    y_ind = Vector{Int64}(undef, ny)
+  bX = similar(X)
+  bY = similar(Y)
+  x_ind = Vector{Int64}(undef, nx)
+  y_ind = Vector{Int64}(undef, ny)
 
-     # obtain initial estimate
-     it = 0
-     for col=1:p
-         for row=col:p
-             it = it + 1
-             indS[it] = getLinearSupport(row, col, eS[it])
+  # obtain initial estimate
+  it = 0
+  for col=1:p
+    for row=col:p
+      it = it + 1
+      indElem = sub2indLowerTriangular(p, row, col)
+      # tmp = estimate(ReducedOracleNormal(), Sx, Sy, X, Y, indElem, eS[it])
 
-             tmp = estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS[it])
-             Δhat[it] = tmp.p
-         end
-     end
+      indS = eS[it]
+      makeFirst!(indS, indElem)
+      C = skron(Sx, Sy, indS)
+      b = svec(Sy, indS) - svec(Sx, indS)      
+      Δ = C \ b
 
-    for b=1:bootSamples
-        sample!(1:nx, x_ind)
-        sample!(1:ny, y_ind)
+      Δhat[it] = Δ[1]
+    end
+  end
 
-        _fill_boot!(bX, X, x_ind)
-        _fill_boot!(bY, Y, y_ind)
+  for _b=1:bootSamples
+    sample!(1:nx, x_ind)
+    sample!(1:ny, y_ind)
 
-        bSx = Symmetric( cov(bX) )
-        bSy = Symmetric( cov(bY) )
+    _fill_boot!(bX, X, x_ind)
+    _fill_boot!(bY, Y, y_ind)
 
-        it = 0
-        for col=1:p
-            for row=col:p
-                it = it + 1
+    bSx = Symmetric( cov(bX) )
+    bSy = Symmetric( cov(bY) )
 
-                tmp = estimate(SymmetricOracleNormal(), bSx, bSy, bX, bY, row, col, indS[it])
-                Δb[it, b] = tmp.p
-            end
+    it = 0
+    for col=1:p
+      for row=col:p
+        it = it + 1
+        indElem = sub2indLowerTriangular(p, row, col)
+        # tmp = estimate(ReducedOracleNormal(), bSx, bSy, bX, bY, indexElementLinear, eS[it])
+
+        indS = eS[it]
+        makeFirst!(indS, indElem)
+        C = skron(bSx, bSy, indS)
+        b = svec(bSy, indS) - svec(bSx, indS)      
+        Δ = C \ b
+
+        Δb[it, _b] = Δ[1]
         end
+      end
     end
 
     BootstrapEstimates(Δhat, Δb), eS

@@ -14,26 +14,30 @@ struct DTraceValidationSupport <: DiffPrecSupport end
 function __initSupport(
     Sx::Symmetric, Sy::Symmetric, X, Y)
 
-    nx, p = size(X)
-    ny     = size(Y, 1)
+    p = size(X)
+    np = div((p + 1)*p, 2)
 
-    estimSupp = Array{BitArray}(undef, div((p + 1)*p, 2))
+    estimSupp = Vector{Vector{Int64}}(undef, np)
 
     # first stage
     λ = 1.01 * quantile(Normal(), 1. - 0.1 / (p * (p+1)))
-    x1 = diffEstimation(Sx, Sy, X, Y, λ)
-    S1 = getSupport(x1)
+    H = Symmetric( skron(Sx, Sy) )
+    b = svec(Sx) - svec(Sy)    
+    x1 = reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ)
+    S1 = getReducedSupport(x1)
 
     # second stage
     ind = 0
     for ci=1:p
-        for ri=ci:p
-            j = sub2indLowerTriangular(p, ri, ci)
-            x2 = invQSymHessian(Sx, Sy, j, X, Y, λ)
-            S2 = getSupport(x2, p)
-            ind = ind + 1
-            estimSupp[ind] = S1 .| S2
-        end
+      for ri=ci:p
+        indElem = sub2indLowerTriangular(p, ri, ci)
+        # x2 = invQSymHessian(Sx, Sy, j, X, Y, λ)
+        # S2 = getSupport(x2, p)
+        x2 = invHessianReduced(H, indElem, Sx, Sy, X, Y, λ)
+        S2 = getReducedSupport(x2)            
+        ind = ind + 1
+        estimSupp[ind] = (1:np)[S1 .| S2]
+      end
     end
 
     estimSupp
