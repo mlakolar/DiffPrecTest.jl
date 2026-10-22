@@ -5,8 +5,7 @@
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 Inference for the difference `Δ = Ωx - Ωy` of the precision matrices of two
-independent Gaussian samples (Kim, Liu and Kolar, 2021, *Two-sample inference
-for high-dimensional Gaussian graphical models*, JRSS-B).
+independent Gaussian samples.
 
 * Confidence intervals for one entry of `Δ`: `estimate` with
   * `SymmetricNormal`: estimate `Δ` by the weighted ℓ1 penalized direct
@@ -45,8 +44,8 @@ CI = simulCIstudentized(straps, 0.95)
 `Distributions` also exports `estimate`; when both packages are loaded, call
 `DiffPrecTest.estimate`.
 
-The `exper/` folder holds the simulation scripts used for the paper. They were
-written for Julia 1.5 and version 0.1 of the package, and are kept as a record.
+The `exper/` folder holds simulation scripts written for Julia 1.5 and version
+0.1 of the package; they are kept as a record.
 
 Package depends on [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl),
 [CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl) and
