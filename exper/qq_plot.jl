@@ -1,23 +1,22 @@
-using Distributions, StatsBase
-using PyPlot
+using Distributions
+using Plots
 
-
-function qqplot(z; color="black")
+# normal Q-Q plot of the sample z added to plt
+function qqplot!(plt, z; color=:black)
     n = length(z)
 
-    grid = [(1 / (n + 1)):(1 / (n + 1)):(1.0 - (1 / (n + 1)));]
+    grid = (1:n) ./ (n + 1)
 
     qz = quantile(z, grid)
-    qd = quantile.(Ref(Distributions.Normal()), grid)
+    qd = quantile.(Normal(), grid)
 
     lims = 3.290
-    x = range(-lims, stop=lims)
 
-    plot(x, x, color="grey", linestyle=":", linewidth=.25)
-    scatter(qz, qd, s=.75, color=color)
+    plot!(plt, [-lims, lims], [-lims, lims]; color=:grey, linestyle=:dot, linewidth=0.5, label="")
+    scatter!(plt, qz, qd; markersize=1, markerstrokewidth=0, color=color, label="")
 
-    xlim([-lims, lims])
-    ylim([-lims, lims])
+    xlims!(plt, -lims, lims)
+    ylims!(plt, -lims, lims)
 
-    nothing
+    plt
 end

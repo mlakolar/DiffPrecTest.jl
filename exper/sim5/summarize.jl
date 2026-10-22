@@ -1,178 +1,79 @@
-using Revise
-
-using JLD
-using DiffPrecTest
+# Support recovery in sim5: false and true positive rates, averaged over the
+# repetitions, of the thresholded refits along the thresholds τ and of the
+# D-trace estimator along its penalty path, and the rates of the D-trace
+# estimator at the penalties chosen on validation data.
+#
+#   julia --project=.. summarize.jl dir variant
+#
+# where dir holds the files res_rep.jld2 written by sim5a.jl (variant a) or
+# sim5b.jl (variant b). Writes sim5<variant>_roc.csv, sim5<variant>_dtrace.csv
+# and sim5<variant>_roc.pdf.
+using LinearAlgebra, Statistics
+using CovSel: getConfusionMatrix, tpr, fpr, precision
 using DataFrames, CSV
-using Random, LinearAlgebra, Distributions, SparseArrays, Statistics
-using CovSel
+using JLD2
 using Plots
 
-dir = "/home/mkolar/.julia/dev/DiffPrecTest/exper/sim5/res"
+include("model.jl")
 
-p = 20
-n = 300
+dir = ARGS[1]
+variant = ARGS[2]
+p = Dict("a" => 60, "b" => 100)[variant]
 
-# generate model
-Ωx = Matrix{Float64}(I, p, p)
-mf = [1., 0.5, 0.4]
-# block 1
-α = 1.
-bp = 1
-ep = 10
-for k=0:2
-    v = α * mf[k+1]
-    for l=bp:ep-k
-        Ωx[l  , l+k] = v
-        Ωx[l+k, l  ] = v
-    end
-end
-# block 2
-α = 2.
-bp = 11
-ep = 15
-for k=0:2
-    v = α * mf[k+1]
-    for l=bp:ep-k
-        Ωx[l  , l+k] = v
-        Ωx[l+k, l  ] = v
-    end
-end
-# block 3
-α = 4.
-bp = 16
-ep = 20
-for k=0:2
-    v = α * mf[k+1]
-    for l=bp:ep-k
-        Ωx[l  , l+k] = v
-        Ωx[l+k, l  ] = v
-    end
-end
-Ωy = Matrix(Diagonal(Ωx))
+Ωx, Ωy = sim5model(p)
 Δ = Ωx - Ωy
 
-Σx = inv(Symmetric(Ωx))
-Σy = inv(Symmetric(Ωy))
+files = filter(f -> occursin(r"^res_\d+\.jld2$", f), readdir(dir))
+NUM_REP = length(files)
+@show NUM_REP
 
-dist_X = MvNormal(convert(Matrix, Σx))
-dist_Y = MvNormal(convert(Matrix, Σy))
+numτ = 500
+numΛ = 50
+FPR_normal = zeros(NUM_REP, numτ)
+TPR_normal = zeros(NUM_REP, numτ)
+FPR_boot = zeros(NUM_REP, numτ)
+TPR_boot = zeros(NUM_REP, numτ)
+FPR_tr = zeros(NUM_REP, numΛ)
+TPR_tr = zeros(NUM_REP, numΛ)
+dtrace = DataFrame(selection=String[], rep=Int[], tpr=Float64[], fpr=Float64[], precision=Float64[])
 
-
-τArr = collect( range(10,0,length=500) )
-
-
-
-NUM_REP=200
-FPR_mine = zeros(NUM_REP, length(τArr))
-TPR_mine = zeros(NUM_REP, length(τArr))
-FPR_tr = zeros(NUM_REP, 50)
-TPR_tr = zeros(NUM_REP, 50)
-
-for rep=1:NUM_REP
-    global FPR_mine, TPR_mine, FPR_tr, TPR_tr, Δ, τArr
-    fname = "$(dir)/res_$(rep).jld"
-
-    file = jldopen(fname, "r")
-    eΔNormal = read(file, "eΔNormal")
-    eΔDTr = read(file, "eΔDTr")
-    close(file)
-
-    for j=1:length(τArr)
-        confusionMatrix = CovSel.getConfusionMatrix(Δ, eΔNormal[j])
-        FPR_mine[rep, j] = CovSel.fpr(confusionMatrix)
-        TPR_mine[rep, j] = CovSel.tpr(confusionMatrix)
+for (rep, f) in enumerate(files)
+    eΔNormal, eΔBoot, eΔDTr, i2, iInf = jldopen(joinpath(dir, f), "r") do file
+        read(file, "eΔNormal"), read(file, "eΔBoot"), read(file, "eΔDTr"), read(file, "i2"), read(file, "iInf")
     end
 
-    for j=1:50
-        confusionMatrix = CovSel.getConfusionMatrix(Δ, eΔDTr[j])
-        FPR_tr[rep, j] = CovSel.fpr(confusionMatrix)
-        TPR_tr[rep, j] = CovSel.tpr(confusionMatrix)
+    for j=1:numτ
+        cm = getConfusionMatrix(Δ, eΔNormal[j])
+        FPR_normal[rep, j] = fpr(cm)
+        TPR_normal[rep, j] = tpr(cm)
+
+        cm = getConfusionMatrix(Δ, eΔBoot[j])
+        FPR_boot[rep, j] = fpr(cm)
+        TPR_boot[rep, j] = tpr(cm)
+    end
+
+    for j=1:numΛ
+        cm = getConfusionMatrix(Δ, eΔDTr[j])
+        FPR_tr[rep, j] = fpr(cm)
+        TPR_tr[rep, j] = tpr(cm)
+    end
+
+    for (selection, i) in (("frobenius", i2), ("max", iInf))
+        cm = getConfusionMatrix(Δ, eΔDTr[i])
+        push!(dtrace, (selection, rep, tpr(cm), fpr(cm), precision(cm)))
     end
 end
 
-pyplot()
-plot(mean(FPR_mine, dims=1)', mean(TPR_mine, dims=1)')
-plot!(mean(FPR_tr, dims=1)', mean(TPR_tr, dims=1)')
+roc = vcat(
+    DataFrame(method="Normal", fpr=vec(mean(FPR_normal; dims=1)), tpr=vec(mean(TPR_normal; dims=1))),
+    DataFrame(method="Boot", fpr=vec(mean(FPR_boot; dims=1)), tpr=vec(mean(TPR_boot; dims=1))),
+    DataFrame(method="DTrace", fpr=vec(mean(FPR_tr; dims=1)), tpr=vec(mean(TPR_tr; dims=1))),
+)
+CSV.write("sim5$(variant)_roc.csv", roc)
+CSV.write("sim5$(variant)_dtrace.csv", combine(groupby(dtrace, :selection), [:tpr, :fpr, :precision] .=> mean))
 
-
-plot(FPR_mine[1, :], TPR_mine[1, :])
-FPR_mine[1, :]
-rep = 1
-fname = "$(dir)/res_$(rep).jld"
-file = jldopen(fname, "r")
-eΔNormal = read(file, "eΔNormal")
-
-
-# using JLD
-# using DiffPrecTest
-# using DataFrames, CSV
-# using Random, LinearAlgebra, Distributions, SparseArrays
-# using CovSel
-#
-# dir = ARGS[1]
-#
-# p = 100
-# n = 300
-#
-# # generate model
-# Ωx = Matrix{Float64}(I, p, p)
-# ρ = 0.5
-# for k=1:p-1
-#     for l=1:p-k
-#         Ωx[l  , l+k] = ρ^k
-#         Ωx[l+k, l  ] = ρ^k
-#     end
-# end
-#
-# Ωy = copy(Ωx)
-# k = div(p, 4)
-# for l=1:p-k
-#     Ωy[l  , l+k] = 0.2
-#     Ωy[l+k, l  ] = 0.2
-# end
-# Δ = Ωx - Ωy
-#
-# NUM_REP = 100
-# resN = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
-# resBoot = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
-# resDTr2 = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
-# resDTrInf = Array{CovSel.ConfusionMatrix}(undef, NUM_REP)
-# i = 0
-# for rep=1:NUM_REP
-#     global i, resN, resBoot, resDTr2, resDTrInf
-#     fname = "$(dir)/res_$(rep).jld"
-#
-#     try
-#       i += 1
-#       file = jldopen(fname, "r")
-#       eΔNormal = read(file, "eΔNormal")
-#       eΔBoot = read(file, "eΔBoot")
-#       eΔDTr = read(file, "eΔDTr")
-#       i2 = read(file, "i2")
-#       iInf = read(file, "iInf")
-#       close(file)
-#
-#       resN[i] = CovSel.getConfusionMatrix(Δ, eΔNormal)
-#       resBoot[i] = CovSel.getConfusionMatrix(Δ, eΔBoot)
-#       resDTr2[i] = CovSel.getConfusionMatrix(Δ, eΔDTr[i2])
-#       resDTrInf[i] = CovSel.getConfusionMatrix(Δ, eΔDTr[iInf])
-#     catch
-#          @show fname
-#     end
-# end
-#
-# @show mean([CovSel.tpr(resN[j]) for j=1:i])
-# @show mean([CovSel.fpr(resN[j]) for j=1:i])
-# @show mean([CovSel.precision(resN[j]) for j=1:i])
-#
-# @show mean([CovSel.tpr(resBoot[j]) for j=1:i])
-# @show mean([CovSel.fpr(resBoot[j]) for j=1:i])
-# @show mean([CovSel.precision(resBoot[j]) for j=1:i])
-#
-# @show mean([CovSel.tpr(resDTr2[j]) for j=1:i])
-# @show mean([CovSel.fpr(resDTr2[j]) for j=1:i])
-# @show mean([CovSel.precision(resDTr2[j]) for j=1:i])
-#
-# @show mean([CovSel.tpr(resDTrInf[j]) for j=1:i])
-# @show mean([CovSel.fpr(resDTrInf[j]) for j=1:i])
-# @show mean([CovSel.precision(resDTrInf[j]) for j=1:i])
+plt = plot(xlabel="false positive rate", ylabel="true positive rate", legend=:bottomright, title="p = $(p)")
+for g in groupby(roc, :method; sort=false)
+    plot!(plt, g.fpr, g.tpr; label=first(g.method))
+end
+savefig(plt, "sim5$(variant)_roc.pdf")

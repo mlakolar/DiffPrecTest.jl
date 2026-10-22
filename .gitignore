@@ -7,3 +7,9 @@
 .vscode/
 *~
 *jld
+*.jld2
+/exper/Manifest*.toml
+/exper/sim*/results/
+/exper/sim*/*.csv
+/exper/sim*/*.tex
+/exper/sim*/*.pdf

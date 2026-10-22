@@ -44,8 +44,8 @@ CI = simulCIstudentized(straps, 0.95)
 `Distributions` also exports `estimate`; when both packages are loaded, call
 `DiffPrecTest.estimate`.
 
-The `exper/` folder holds simulation scripts written for Julia 1.5 and version
-0.1 of the package; they are kept as a record.
+The `exper/` folder holds the simulation scripts, with their own environment;
+see [`exper/README.md`](exper/README.md).
 
 Package depends on [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl),
 [CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl) and

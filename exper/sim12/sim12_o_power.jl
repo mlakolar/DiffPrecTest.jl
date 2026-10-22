@@ -1,9 +1,14 @@
+# Power of the bootstrap test of Ωx = Ωy, with oracle supports, along the path
+# Ωy = (1 - α) Ωx + α Ωy₁ (banded Ωx and Ωy).
+#
+#   julia --project=.. sim12_o_power.jl rep ip ialpha dir
+#
+# saves the bootstrap estimates to dir/res_rep.jld2
 using DiffPrecTest
-using Statistics, StatsBase, LinearAlgebra
-using SparseArrays
-using ProximalBase, CoordinateDescent, CovSel
-using Random, Distributions
-using JLD
+using LinearAlgebra, Random
+using ProximalBase: sub2indLowerTriangular
+using Distributions
+using JLD2
 
 @show gethostname()
 
@@ -15,7 +20,6 @@ dir = ARGS[4]
 alpha = 0.:0.1:1.
 pArr = [50, 100, 150]
 n = 300
-NUM_REP = 1000
 
 
 p = pArr[ip]
@@ -55,23 +59,19 @@ D = Diagonal(d)
 dist_X = MvNormal(convert(Matrix, Σx))
 dist_Y = MvNormal(convert(Matrix, Σy))
 
-rp = div(p * (p+1), 2)
-res = Matrix{DiffPrecResultNormal}(undef, rp, NUM_REP)
-
 # generate data
 Random.seed!(12346 + rep*100 + ialpha)
-X = rand(dist_X, n)'
-Y = rand(dist_Y, n)'
+X = permutedims(rand(dist_X, n))
+Y = permutedims(rand(dist_Y, n))
 
 Sx = Symmetric( X'X / n )
 Sy = Symmetric( Y'Y / n )
 
-S = BitArray( abs(Δ[r, c]) > 1e-4 for r = 1:p, c = 1:p )
-eS_init = Array{BitArray}(undef, div((p + 1)*p, 2))
-for j=1:div((p + 1)*p, 2)
-    eS_init[j] = S
-end
+# oracle supports: the nonzero entries of Δ as indices into svec(Δ); bootstrap
+# reorders each support, so every entry gets its own copy
+S = [sub2indLowerTriangular(p, r, c) for c = 1:p for r = c:p if abs(Δ[r, c]) > 1e-4]
+eS_init = [copy(S) for j=1:div((p + 1)*p, 2)]
 
 @time boot_res, eS = bootstrap(X, Y; estimSupport=eS_init)
 
-@save "$(dir)/res_$(rep).jld" boot_res
+@save "$(dir)/res_$(rep).jld2" boot_res
