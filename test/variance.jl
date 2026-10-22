@@ -3,9 +3,14 @@ module VarianceTest
 using Test
 using DiffPrecTest
 using ProximalBase
-using Random, LinearAlgebra, SparseArrays, Statistics, Distributions
+using Random, LinearAlgebra, SparseArrays, Statistics
 
-function varianceSymAlt(
+Random.seed!(134)
+
+# variance of ω'(H Δ - (Sy - Sx)) computed with dense matrices, where hess(A, B)
+# is the Hessian H for the covariances A of X and B of Y
+function varianceAlt(
+    hess,
     Sx,
     Sy,
     X,
@@ -23,18 +28,18 @@ function varianceSymAlt(
     r = zeros(ny)
 
     # compute statistics
-    H = (kron(Sx, Sy) + kron(Sy, Sx)) / 2.
+    H = hess(Sx, Sy)
     t = dot(ω, H[indω, indΔ] * Δ) - dot(ω, Sy[indω] - Sx[indω])
 
     # compute qk
     for k=1:nx
-        H = (kron(X[k, :]*X[k, :]', Sy) + kron(Sy, X[k, :]*X[k, :]')) / 2.
+        H = hess(X[k, :]*X[k, :]', Sy)
         q[k] = dot(ω, H[indω, indΔ] * Δ) - dot(ω, Sy[indω] - (X[k, :]*X[k, :]')[indω])
     end
 
     # compute rk
     for k=1:ny
-        H = (kron(Y[k, :]*Y[k, :]', Sx) + kron(Sx, Y[k, :]*Y[k, :]')) / 2.
+        H = hess(Sx, Y[k, :]*Y[k, :]')
         r[k] = dot(ω, H[indω, indΔ] * Δ) - dot(ω, (Y[k, :]*Y[k, :]')[indω] - Sx[indω])
     end
 
@@ -44,31 +49,58 @@ function varianceSymAlt(
     return σ1/nx + σ2/ny
 end
 
-@testset "sym variance" begin
-    Random.seed!(134)
-    n = 100
+symHessian(A, B) = (kron(A, B) + kron(B, A)) / 2.
+asymHessian(A, B) = kron(B, A)
 
+function sampleData(n)
     Ωx = [1. 0.4; 0.4 1]
     Ωy = [1. 0.3; 0.3 1]
-    Σx = inv(Symmetric(Ωx))
-    Σy = inv(Symmetric(Ωy))
-    dist_X = MvNormal(convert(Matrix, Σx))
-    dist_Y = MvNormal(convert(Matrix, Σy))
+    X = randn(n, 2) / cholesky(Ωx).U'
+    Y = randn(n, 2) / cholesky(Ωy).U'
+    X, Y
+end
 
-    X = rand(dist_X, n)'
-    Y = rand(dist_Y, n)'
+@testset "sym variance" begin
+    n = 100
+    X, Y = sampleData(n)
 
     Sx = Symmetric( X'X / n )
     Sy = Symmetric( Y'Y / n )
 
     ind = [1, 2, 3, 4]
-    H = (kron(Sx, Sy) + kron(Sy, Sx)) / 2.
+    H = symHessian(Sx, Sy)
     tmp = zeros(length(ind))
     tmp[1] = 1.
     ω = H \ tmp
     Δ = H \ (Sy[ind] - Sx[ind])
 
-    @test variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind, Δ, ind) ≈ varianceSymAlt(Sx, Sy, X, Y, ω, ind, Δ, ind)
+    @test variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind, Δ, ind) ≈ varianceAlt(symHessian, Sx, Sy, X, Y, ω, ind, Δ, ind)
+
+    # different supports for ω and Δ
+    ω = randn(3)
+    Δ = randn(2)
+    @test variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3]) ≈ varianceAlt(symHessian, Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3])
+end
+
+@testset "asym variance" begin
+    n = 100
+    X, Y = sampleData(n)
+
+    Sx = Symmetric( X'X / n )
+    Sy = Symmetric( Y'Y / n )
+
+    ind = [1, 2, 3, 4]
+    H = asymHessian(Sx, Sy)
+    tmp = zeros(length(ind))
+    tmp[1] = 1.
+    ω = H \ tmp
+    Δ = H \ (Sy[ind] - Sx[ind])
+
+    @test variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind, Δ, ind) ≈ varianceAlt(asymHessian, Sx, Sy, X, Y, ω, ind, Δ, ind)
+
+    ω = randn(3)
+    Δ = randn(2)
+    @test variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3]) ≈ varianceAlt(asymHessian, Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3])
 end
 
 end

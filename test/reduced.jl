@@ -1,62 +1,30 @@
 module ReducedTest
 
 using Test
-using Random, LinearAlgebra, Statistics, Distributions, SparseArrays
-using Convex, SCS
+using Random, LinearAlgebra, Statistics, SparseArrays
+using JuMP, Ipopt
 using ProximalBase
+using CoordinateDescent: CDOptions
 using DiffPrecTest
 using DiffPrecTest: TwoSampleUstatistics, svec, skron
 
+Random.seed!(5)
 
-function generateData(p)
-  n = 100
-  # generate model
-  Ωx = Matrix{Float64}(I, p, p)
-  for l=1:p-1
-    Ωx[l  , l+1] = 0.6
-    Ωx[l+1, l  ] = 0.6
-  end
-  for l=1:p-2
-    Ωx[l  , l+2] = 0.3
-    Ωx[l+2, l  ] = 0.3
-  end
-  Δ = zeros(p, p)
-  # generate Delta
-  for j=1:p
-    Δ[j, j] = rand(Uniform(0.1, 0.2))
-  end
-  for j=1:p-1
-    v = rand(Uniform(0.2, 0.5))
-    Δ[j  , j+1] = v
-    Δ[j+1, j  ] = v
-  end
-  Ωy = Ωx - Δ
-  d = Vector{Float64}(undef, p)
-  rand!(Uniform(0.5, 2.5), d)
-  d .= sqrt.(d)
-  D = Diagonal(d)
-  Σx = inv(Symmetric(D * Ωx * D))
-  Σy = inv(Symmetric(D * Ωy * D))
+include("data.jl")
+generateData(p) = generateData(p, 100)[1:2]
 
-  dist_X = MvNormal(convert(Matrix, Σx))
-  dist_Y = MvNormal(convert(Matrix, Σy))
-
-  X = rand(dist_X, n)'
-  Y = rand(dist_Y, n)'
-
-  X, Y
-end
-
+# minimize x'Ax/2 + b'x + λ ∑ ωᵢ|xᵢ| over x = u - v with u, v ≥ 0
 function solve_pen_quad(A, b, λ, ω)
   p = size(A, 1)
-  x = Variable(p)
-  expr = 0.
-  for i=1:p
-    expr += abs(x[i]) * ω[i]
-  end
-  problem = minimize(quadform(x, A / 2.) + dot(x, b) + expr * λ)
-  solve!(problem, () -> SCS.Optimizer(verbose = false))
-  x.value
+  model = Model(Ipopt.Optimizer)
+  set_silent(model)
+  @variable(model, u[1:p] >= 0)
+  @variable(model, v[1:p] >= 0)
+  @expression(model, x, u .- v)
+  @objective(model, Min, x' * (Matrix(A) / 2.) * x + dot(b, x) + λ * dot(ω, u .+ v))
+  optimize!(model)
+  termination_status(model) == LOCALLY_SOLVED || error("Ipopt: ", termination_status(model))
+  JuMP.value.(x)
 end
 
 
@@ -129,7 +97,7 @@ end
   H = Symmetric( skron(Sx, Sy) )
   b = svec(Sx) - svec(Sy)
 
-  λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
+  λ = DiffPrecTest._penaltyLevel(p)
 
   out1 = reducedDiffEstimationAlt(H, b, Sx, Sy, X, Y, λ)  
   out2 = DiffPrecTest.reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ)
@@ -183,13 +151,13 @@ end
 end
 
 
-@testset "invHessianReduced" begin  
+@testset "invHessianReduced" begin
   function invHessianReducedAlt(H::Symmetric, indRow, Sx, Sy, X, Y, λ)
     x = SparseIterate(size(H, 1))
-    x[indRow] = 1.
-    
-    b = zeros(size(H, 1))
-    b[indRow] = 1.
+    x[indRow] = 1. / H[indRow, indRow]
+
+    local b = zeros(size(H, 1))
+    b[indRow] = -1.
 
     ω = Array{eltype(H)}(undef, length(x))
     DiffPrecTest._computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)    
@@ -214,14 +182,23 @@ end
   H = Symmetric( skron(Sx, Sy) )
   b = svec(Sx) - svec(Sy)
 
-  λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
+  λ = DiffPrecTest._penaltyLevel(p)
 
   for j=1:m
-    out1 = invHessianReducedAlt(H, j, Sx, Sy, X, Y, λ)  
+    out1 = invHessianReducedAlt(H, j, Sx, Sy, X, Y, λ)
     out2 = DiffPrecTest.invHessianReduced(H, j, Sx, Sy, X, Y, λ)
-  
+
     @test out1 ≈ Vector(out2) atol=1e-4
   end
+
+  # with a negligible penalty the estimates are the rows of inv(H) and svec(Δ)
+  opt = CDOptions(; maxIter=5000, optTol=1e-12)
+  for j in [1, 2, 7]
+    out = DiffPrecTest.invHessianReduced(H, j, Sx, Sy, X, Y, 1e-10, opt)
+    @test Vector(out) ≈ inv(H)[:, j] atol=1e-6
+  end
+  out = DiffPrecTest.reducedDiffEstimation(H, b, Sx, Sy, X, Y, 1e-10, opt)
+  @test Vector(out) ≈ svec(Symmetric(inv(Sx) - inv(Sy))) atol=1e-6
 end
 
 

@@ -4,6 +4,8 @@ using Test
 using DiffPrecTest: svec, skron
 using SparseArrays, Random, LinearAlgebra
 
+Random.seed!(3)
+
 function Q(p::Int)
   _c = 1. / sqrt(2.)
   rp = div((p+1)*p,2)

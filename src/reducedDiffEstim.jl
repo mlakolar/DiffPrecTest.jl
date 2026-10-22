@@ -87,6 +87,15 @@ function _computeVarStep1!(
   end
 end
 
+"""
+    reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ, options=CDOptions())
+
+First stage of [`ReducedNormal`](@ref): minimize `x'Hx/2 + b'x` plus a weighted
+ℓ1 penalty with level `λ`, where `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` and
+`b = svec(Sx) - svec(Sy)`, so that `x` estimates `svec(Δ)`. The weights are
+standard errors of the gradient estimated from `X` and `Y`, computed at zero and
+again at the first solution. Returns a `SparseIterate` of length `p(p+1)/2`.
+"""
 function reducedDiffEstimation(
   H::Symmetric, 
   b::Vector,   
@@ -189,6 +198,15 @@ function _computeVarStep2!(ω,
 end
 
 
+"""
+    invHessianReduced(H, indRow, Sx, Sy, X, Y, λ, options=CDOptions())
+
+Second stage of [`ReducedNormal`](@ref): estimate the row `indRow` of the
+inverse of `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` by minimizing `x'Hx/2 - x[indRow]`
+plus a weighted ℓ1 penalty with level `λ` that leaves `x[indRow]` unpenalized.
+The weights are standard errors of the gradient estimated from `X` and `Y`.
+Returns a `SparseIterate` of length `p(p+1)/2`.
+"""
 function invHessianReduced(H::Symmetric, 
   indRow::Int, 
   Sx::Symmetric,
@@ -199,7 +217,7 @@ function invHessianReduced(H::Symmetric,
   options=CDOptions())
 
   b = zeros(size(H, 1))
-  b[indRow] = 1.
+  b[indRow] = -1.
   f = CDQuadraticLoss(H, b)
   x = SparseIterate(size(H, 1))
   x[indRow] = 1. / H[indRow, indRow]
@@ -250,7 +268,7 @@ function estimate(::ReducedNormal, X, Y, indElem;
   Sx::Union{Symmetric, Nothing}=nothing,
   Sy::Union{Symmetric, Nothing}=nothing,
   H::Union{Symmetric, Nothing}=nothing,
-  Δ::Union{SymmetricSparseIterate, Nothing}=nothing,
+  Δ::Union{SparseIterate, Nothing}=nothing,
   suppΔ::Union{BitArray{1}, Nothing}=nothing,
   ω::Union{SparseIterate, Nothing}=nothing,
   suppω::Union{BitArray{1}, Nothing}=nothing
@@ -271,7 +289,7 @@ function estimate(::ReducedNormal, X, Y, indElem;
   b = svec(Sx) - svec(Sy)
 
   # first stage
-  λ = 1.01 * quantile( Normal(), 1. - 0.1 / (p*(p+1)) )
+  λ = _penaltyLevel(p)
   if Δ === nothing && suppΔ === nothing
     Δ = reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ)
     suppΔ = getReducedSupport(Δ)

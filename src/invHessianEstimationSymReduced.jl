@@ -3,6 +3,14 @@
 # computes row ind of inverse of (1/2) ⋅ Q (Σy ⊗ Σx + Σx ⊗ Σy) Q'
 #
 ####################################
+"""
+    CDInverseReducedSymKroneckerLoss(Σx::Symmetric, Σy::Symmetric, ind)
+
+The loss `θ'Hθ/2 - θ[ind]` with `H = Q (Σx ⊗ Σy + Σy ⊗ Σx) Q' / 2`, the Hessian
+of the direct difference loss in the half-vectorized parametrization `svec(Δ)`,
+as a `CoordinateDifferentiableFunction` of a `SparseIterate` of length
+`p(p+1)/2`. Its minimizer is the row `ind` of the inverse of `H`.
+"""
 struct CDInverseReducedSymKroneckerLoss{T<:AbstractFloat, S} <: CoordinateDifferentiableFunction
   Σx::Symmetric{T, S}
   Σy::Symmetric{T, S}
@@ -64,7 +72,6 @@ function CoordinateDescent.gradient(
   j::Int64) where {T <: AbstractFloat}
 
   A = f.A
-  B = f.B
   ri, ci = ind2subLowerTriangular(f.p, j)
   @inbounds v = (A[ri,ci] + A[ci,ri]) / 2.
   v = ri == ci ? v : sqrt(2.) * v
@@ -208,6 +215,18 @@ function _computeReducedVar!(ω, f::CDInverseReducedSymKroneckerLoss, X, Y, Θ)
 
 end
 
+"""
+    invQSymHessian(Sx, Sy, ind, X, Y, λ, options=CDOptions())
+
+Second stage of [`SymmetricNormal`](@ref): estimate the row `ind` of the inverse
+of `H = Q (Σx ⊗ Σy + Σy ⊗ Σx) Q' / 2`, where `ind` indexes the lower triangle
+(see `ProximalBase.sub2indLowerTriangular`), by minimizing
+[`CDInverseReducedSymKroneckerLoss`](@ref) plus a weighted ℓ1 penalty with level
+`λ` that leaves the entry `ind` unpenalized. The weights are standard errors of
+the gradient estimated from `X` and `Y`, computed at the starting point
+`e_ind / H[ind, ind]` and again at the first solution. Returns a `SparseIterate`
+of length `p(p+1)/2`.
+"""
 function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDOptions())
     nx, p = size(X)
     ny = size(Y, 1)
@@ -218,7 +237,7 @@ function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDO
     x[ind] = 1. / skron(Sx, Sy, ind, ind)
     CoordinateDescent.initialize!(f, x)
 
-    ##################0
+    ##################
     #
     #  first stage
     #

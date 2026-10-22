@@ -3,6 +3,13 @@
 # loss tr(Σx⋅θ⋅Σy⋅θ)/2 - tr(Θ⋅E_ab)    ---> computes inverse of (Σy ⊗ Σx)
 #
 ####################################
+"""
+    CDInverseKroneckerLoss(Σx::Symmetric, Σy::Symmetric, a, b)
+
+The loss `tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[a, b]` as a `CoordinateDifferentiableFunction`
+of a `SparseIterate` holding `vec(Θ)` for a `p × p` matrix `Θ`. Its minimizer
+is the row `(b - 1) p + a` of the inverse of `Σy ⊗ Σx`.
+"""
 struct CDInverseKroneckerLoss{T<:AbstractFloat, S} <: CoordinateDifferentiableFunction
   Σx::Symmetric{T, S}
   Σy::Symmetric{T, S}
@@ -156,6 +163,16 @@ end
 
 
 
+"""
+    invAsymHessianEstimation(Sx, Sy, ri, ci, X, Y, λ, options=CDOptions())
+
+Second stage of [`AsymmetricNormal`](@ref): estimate the row `(ci - 1) p + ri`
+of the inverse of `Σy ⊗ Σx` by minimizing [`CDInverseKroneckerLoss`](@ref) plus
+a weighted ℓ1 penalty with level `λ` that leaves that entry unpenalized. The
+weights are standard errors of the gradient estimated from `X` and `Y`, computed
+at the starting point, the indicator of the entry, and again at the first
+solution. Returns a `SparseIterate` of length `p²`.
+"""
 function invAsymHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, options=CDOptions())
     nx, p = size(X)
     ny = size(Y, 1)
