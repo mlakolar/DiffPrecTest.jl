@@ -1,10 +1,32 @@
+"""
+    BootstrapEstimates
+
+Refitted estimates `Δhat` of `svec(Δ)`, the lower triangle of `Δ` in the order
+of `ProximalBase.sub2indLowerTriangular` with the off-diagonal entries multiplied
+by `√2`, and their bootstrap replicates `Δb`, one replicate per column.
+"""
 struct BootstrapEstimates
   Δhat::Vector{Float64}
   Δb::Matrix{Float64}     # each column represents a bootstrap estimate
 end
 
 
-function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Vector{Vector{Int64}},Nothing}=nothing)
+"""
+    bootstrap(X, Y; bootSamples=300, estimSupport=nothing, rng=Random.default_rng())
+
+Refit every entry of `svec(Δ)` on its estimated support and compute
+`bootSamples` bootstrap replicates of the refitted estimates, resampling the
+rows of `X` and `Y`. Returns `(straps, eS)`: the [`BootstrapEstimates`](@ref)
+and the supports, as vectors of indices into `svec(Δ)`, one per entry. The
+supports are computed by the first and second stage estimators of
+[`ReducedNormal`](@ref) unless given in `estimSupport`; the entry itself is
+moved to the front of each support, which is modified.
+
+Use [`simulCI`](@ref) or [`simulCIstudentized`](@ref) for simultaneous
+confidence intervals.
+"""
+function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Vector{Vector{Int64}},Nothing}=nothing,
+                   rng::AbstractRNG=Random.default_rng())
   nx, p = size(X)
   ny    = size(Y, 1)
 
@@ -43,8 +65,8 @@ function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Vector{Vect
   end
 
   for _b=1:bootSamples
-    sample!(1:nx, x_ind)
-    sample!(1:ny, y_ind)
+    rand!(rng, x_ind, 1:nx)
+    rand!(rng, y_ind, 1:ny)
 
     _fill_boot!(bX, X, x_ind)
     _fill_boot!(bY, Y, y_ind)
@@ -66,17 +88,25 @@ function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Vector{Vect
         Δ = C \ b
 
         Δb[it, _b] = Δ[1]
-        end
       end
     end
+  end
 
-    BootstrapEstimates(Δhat, Δb), eS
+  BootstrapEstimates(Δhat, Δb), eS
 end
 
 
 
 
 
+"""
+    simulCI(straps::BootstrapEstimates, α=0.95)
+
+Simultaneous confidence intervals with coverage `α` for the entries of
+`svec(Δ)`, `Δhat .± x` with `x` the `α` quantile of the bootstrap distribution
+of `‖Δhat - Δb‖∞`. Returns a matrix with the lower ends of the intervals in
+the first column and the upper ends in the second.
+"""
 function simulCI(straps::BootstrapEstimates, α::Float64=0.95)
     m, bootSamples = size(straps.Δb)
 
@@ -93,6 +123,13 @@ function simulCI(straps::BootstrapEstimates, α::Float64=0.95)
     CI
 end
 
+"""
+    simulCIstudentized(straps::BootstrapEstimates, α=0.95)
+
+Like [`simulCI`](@ref), but every entry is standardized by its bootstrap
+standard error `w`: the intervals are `Δhat .± x .* w` with `x` the `α` quantile
+of the bootstrap distribution of `‖(Δhat - Δb) ./ w‖∞`.
+"""
 function simulCIstudentized(straps::BootstrapEstimates, α::Float64=0.95)
     m, bootSamples = size(straps.Δb)
 

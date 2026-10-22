@@ -1,3 +1,10 @@
+# quantile function of the standard normal distribution
+_normQuantile(α::Real) = -sqrt(2.) * erfcinv(2. * α)
+
+# penalty level used by the first and second stage estimators with p variables
+_penaltyLevel(p::Integer) = 1.01 * _normQuantile(1. - 0.1 / (p * (p + 1)))
+
+
 # compute kron(A, B)[Irow, Icol]
 function kron_sub!(out, A, B, Irow, Icol)
   @assert size(out, 1) == length(Irow)
@@ -55,11 +62,10 @@ skron_sub(A, B, Irow, Icol) = skron_sub!(Matrix{Float64}(undef, length(Irow), le
 
 
 function _getElemKron(A::AbstractMatrix, B::AbstractMatrix, row, col)
-    m, n = size(A)
     p, q = size(B)
 
-    ac = div(col-1, p) + 1
-    bc = mod(col-1, p) + 1
+    ac = div(col-1, q) + 1
+    bc = mod(col-1, q) + 1
     ar = div(row-1, p) + 1
     br = mod(row-1, p) + 1
 
@@ -126,13 +132,14 @@ function _varSxSy(Sx, nx, Sy, ny, indS)
 end
 
 
+# entries of a symmetric x larger than τ in absolute value, as a p × p BitMatrix
 function getSupport(x::SymmetricSparseIterate, τ::Float64=1e-3)
   p = size(x, 1)
 
   S = falses(p, p)
   for ci=1:p
       for ri=ci:p
-          if abs(x[ri, ci] > τ)
+          if abs(x[ri, ci]) > τ
               S[ri, ci] = true
               S[ci, ri] = true
           end
@@ -141,24 +148,36 @@ function getSupport(x::SymmetricSparseIterate, τ::Float64=1e-3)
   S
 end
 
+# x holds either the lower triangle of a symmetric p × p matrix (length p(p+1)/2),
+# or a p × p matrix stored by columns (length p²)
 function getSupport(x::SparseIterate, p::Int, τ::Float64=1e-3)
   S = falses(p, p)
-  ind = 0
-  for ci=1:p
-      for ri=ci:p
-          ind += 1
-          if abs(x[ind] > τ)
-              S[ri, ci] = true
-              S[ci, ri] = true
+  if length(x) == p * p
+      for ind=1:p*p
+          if abs(x[ind]) > τ
+              S[ind] = true
           end
       end
+  elseif length(x) == div(p * (p + 1), 2)
+      ind = 0
+      for ci=1:p
+          for ri=ci:p
+              ind += 1
+              if abs(x[ind]) > τ
+                  S[ri, ci] = true
+                  S[ci, ri] = true
+              end
+          end
+      end
+  else
+      throw(DimensionMismatch("length of x must be p(p+1)/2 or p²"))
   end
   S
 end
 
 getReducedSupport(x::SparseIterate, τ::Float64=1e-3) = abs.(x) .> τ
 
-function getLinearSupport(row::Int, col::Int, S1::BitArray{2}, S2::BitArray{2})
+function getLinearSupport(row::Int, col::Int, S1::AbstractMatrix{Bool}, S2::AbstractMatrix{Bool})
   p = size(S1, 1)
 
   supp = Vector{Int64}()
@@ -172,7 +191,7 @@ function getLinearSupport(row::Int, col::Int, S1::BitArray{2}, S2::BitArray{2})
   makeFirst!(supp, p, row, col)
 end
 
-function getLinearSupport(row::Int, col::Int, S::BitArray{2})
+function getLinearSupport(row::Int, col::Int, S::AbstractMatrix{Bool})
   p = size(S, 1)
 
   supp = Vector{Int64}()
@@ -186,6 +205,7 @@ function getLinearSupport(row::Int, col::Int, S::BitArray{2})
   makeFirst!(supp, p, row, col)
 end
 
+# moves (row, col) to the front of supp and (col, row) to the second position
 function makeFirst!(supp::Vector{Int64}, p, row, col)
   ind = (col - 1) * p + row
   pos = findfirst(isequal(ind), supp)
@@ -199,7 +219,7 @@ function makeFirst!(supp::Vector{Int64}, p, row, col)
     ind = (row - 1) * p + col
     pos = findfirst(isequal(ind), supp)
     if  pos === nothing
-        pushfirst!(supp, ind)
+        insert!(supp, 2, ind)
     else
         supp[pos], supp[2] = supp[2], supp[pos]
     end
@@ -219,7 +239,15 @@ function makeFirst!(supp::Vector{Int64}, indElem)
 end
 
 
+"""
+    computeSimulationResult(res, trueParam, α=0.05)
 
+Summarize the estimates `res` of one entry of `Δ` with true value `trueParam`
+over repetitions of a simulation as a [`SimulationResult`](@ref). The confidence
+intervals at level `1 - α` are `p ± z₁₋α/₂ std` for a vector of
+[`DiffPrecResultNormal`](@ref), and the `α/2` and `1 - α/2` quantiles of the
+bootstrap replicates for a vector of [`DiffPrecResultBoot`](@ref).
+"""
 function computeSimulationResult(res::Vector{DiffPrecResultNormal}, trueParam::Float64, α::Float64=0.05)
   Eestim = 0.
   bias = 0.
@@ -227,7 +255,7 @@ function computeSimulationResult(res::Vector{DiffPrecResultNormal}, trueParam::F
   lenCoverage = 0.
 
   num_rep = length(res)
-  zα = quantile(Normal(), 1. - α / 2.)
+  zα = _normQuantile(1. - α / 2.)
 
   for rep=1:num_rep
     if res[rep].p - zα * res[rep].std < trueParam && res[rep].p + zα * res[rep].std > trueParam
@@ -257,7 +285,7 @@ function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Flo
   z2 = 1. - α / 2.
 
   for rep=1:num_rep
-    lb, ub = quantile!(res[rep].boot_p, [z1, z2])
+    lb, ub = quantile(res[rep].boot_p, [z1, z2])
     if lb < trueParam && ub > trueParam
       coverage += 1
     end

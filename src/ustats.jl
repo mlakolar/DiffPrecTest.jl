@@ -2,21 +2,33 @@ abstract type UStatistics end
 
 ########################################
 
-struct OneSampleUstatistics{N} <: UStatistics
-  h
+# U-statistic of order N of one sample with kernel h
+struct OneSampleUstatistics{N, F} <: UStatistics
+  h::F
 end
+OneSampleUstatistics{N}(h::F) where {N, F} = OneSampleUstatistics{N, F}(h)
 
-struct TwoSampleUstatistics{N, M} <: UStatistics
-  h
+# U-statistic of orders N and M of two samples with kernel h
+struct TwoSampleUstatistics{N, M, F} <: UStatistics
+  h::F
 end
+TwoSampleUstatistics{N, M}(h::F) where {N, M, F} = TwoSampleUstatistics{N, M, F}(h)
 
 ######################################
 
-compute(s::UStatistics, X::AbstractArray) = compute(s, s.h, X)
-compute(s::UStatistics, X::AbstractArray, Y::AbstractArray) = compute(s, s.h, X, Y)
+"""
+    compute(s, X)
+    compute(s, X, Y)
+
+Value of the one sample U-statistic `s` on the observations `X` (the elements of
+a vector or the rows of a matrix), or of the two sample U-statistic `s` on `X`
+and `Y`.
+"""
+compute(s::UStatistics, X::AbstractArray) = _compute(s, s.h, X)
+compute(s::UStatistics, X::AbstractArray, Y::AbstractArray) = _compute(s, s.h, X, Y)
 
 
-function compute(::OneSampleUstatistics{1}, h, X::AbstractVector)
+function _compute(::OneSampleUstatistics{1}, h, X::AbstractVector)
   v = zero(eltype(X))
   n = 0
   for x in X
@@ -27,7 +39,7 @@ function compute(::OneSampleUstatistics{1}, h, X::AbstractVector)
   v / n
 end
 
-function compute(::OneSampleUstatistics{1}, h, X::AbstractMatrix)
+function _compute(::OneSampleUstatistics{1}, h, X::AbstractMatrix)
   n = size(X, 1)
   v = 0.
   @inbounds for i=1:n
@@ -37,7 +49,7 @@ function compute(::OneSampleUstatistics{1}, h, X::AbstractMatrix)
   v / n
 end
 
-function compute(::OneSampleUstatistics{2}, h, X::AbstractVector)
+function _compute(::OneSampleUstatistics{2}, h, X::AbstractVector)
   n = length(X)
   v = 0.
   @inbounds for i1=1:n
@@ -50,7 +62,7 @@ function compute(::OneSampleUstatistics{2}, h, X::AbstractVector)
 end
 
 
-function compute(::OneSampleUstatistics{2}, h, X::AbstractMatrix)
+function _compute(::OneSampleUstatistics{2}, h, X::AbstractMatrix)
   n = size(X, 1)
   v = 0.
   @inbounds for i1=1:n
@@ -63,7 +75,7 @@ function compute(::OneSampleUstatistics{2}, h, X::AbstractMatrix)
   2. * v / n / (n-1)
 end
 
-function compute(::TwoSampleUstatistics{1, 1}, h, X::AbstractVector, Y::AbstractVector)
+function _compute(::TwoSampleUstatistics{1, 1}, h, X::AbstractVector, Y::AbstractVector)
   nx = length(X)
   ny = length(Y)
 
@@ -76,8 +88,7 @@ function compute(::TwoSampleUstatistics{1, 1}, h, X::AbstractVector, Y::Abstract
   v / nx / ny
 end
 
-function compute(s::TwoSampleUstatistics{1, 1}, X::AbstractMatrix, Y::AbstractMatrix)
-  h = s.h
+function _compute(::TwoSampleUstatistics{1, 1}, h, X::AbstractMatrix, Y::AbstractMatrix)
   nx = size(X, 1)
   ny = size(Y, 1)
 
@@ -92,24 +103,35 @@ end
 
 ######################################
 
-variance(s::UStatistics, X::AbstractArray) = variance(s, s.h, X)
-variance(s::UStatistics, X::AbstractArray, Y::AbstractArray) = variance(s, s.h, X, Y)
+"""
+    variance(s, X)
+    variance(s, X, Y)
 
-function variance(::OneSampleUstatistics{1}, h, X::AbstractVector)
+For a one sample U-statistic `s` of order one, the sample variance of the kernel
+evaluated at the observations `X`. For a two sample U-statistic `s` of orders
+one and one, the estimated variance of `compute(s, X, Y)`.
+
+Methods for the estimators of `Δ` compute the variance of the estimating
+equation for one entry; see [`estimate`](@ref).
+"""
+variance(s::UStatistics, X::AbstractArray) = _variance(s, s.h, X)
+variance(s::UStatistics, X::AbstractArray, Y::AbstractArray) = _variance(s, s.h, X, Y)
+
+function _variance(::OneSampleUstatistics{1}, h, X::AbstractVector)
   n = length(X)
   q = map(h, X)
   t = mean(q)
   (sum(abs2, q) - n * t^2) / (n - 1)
 end
 
-function variance(::OneSampleUstatistics{1}, h, X::AbstractMatrix)
+function _variance(::OneSampleUstatistics{1}, h, X::AbstractMatrix)
   n = size(X, 1)
   q = mapslices(h, X; dims = 2)
   t = mean(q)
   (sum(abs2, q) - n * t^2) / (n - 1)
 end
 
-function variance(::TwoSampleUstatistics{1, 1}, h, X::AbstractMatrix, Y::AbstractMatrix)
+function _variance(::TwoSampleUstatistics{1, 1}, h, X::AbstractMatrix, Y::AbstractMatrix)
   nx = size(X, 1)
   ny = size(Y, 1)
 
