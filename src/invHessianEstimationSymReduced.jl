@@ -123,6 +123,10 @@ function CoordinateDescent.descendCoordinate!(
   newVal = cdprox!(g, x, j, a)
   h = newVal - oldVal
 
+  # nothing to update when the coordinate did not move, as for most
+  # coordinates that stay at zero in a full pass
+  iszero(h) && return h
+
   # update internals
   if ri == ci
     for ac=1:p, ar=1:p

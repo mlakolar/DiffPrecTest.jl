@@ -93,6 +93,10 @@ function CoordinateDescent.descendCoordinate!(
   newVal = cdprox!(g, x, j, a)
   h = newVal - oldVal
 
+  # nothing to update when the coordinate did not move, as for most
+  # coordinates that stay at zero in a full pass
+  iszero(h) && return h
+
   # update internals
   for ac=1:p, ar=1:p
     @inbounds A[ar, ac] += h * Σx[ar, ri] * Σy[ci, ac]
