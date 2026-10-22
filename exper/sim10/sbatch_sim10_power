@@ -1,24 +1,29 @@
 #!/bin/bash
 
-## call this file as
-##   sbatch --job-name=diff_sim1_${1}_${2} sbatch_sim1 dir
+## submitted by start_sbatch_power.sh as
+##   sbatch --job-name=diff_sim10_${ip}_${ialpha}_power sbatch_sim10_power ip ialpha
+##
+## JULIA (default: julia) and SCRATCH (default: $HOME/scratch) can be set in the
+## environment. Results go to $SCRATCH/diffTest/sim10_o_power_${1}_${2}, logs to
+## $SCRATCH/output/sim10_o_power_${1}_${2}. Pass the partition for your cluster to sbatch
+## (sbatch -p ...).
 
 #SBATCH --ntasks=50
-#SBATCH --partition=broadwl
 #SBATCH --time=1-12:00:00
 
-module load parallel
-module load hdf5
-
-
-SCRATCH_PATH=/scratch/midway2/mkolar
-TMPOUT=$SCRATCH_PATH/output/sim10_o_power
-OUT=$SCRATCH_PATH/diffTest/sim10_o_power_${1}_${2}
-JULIA_PATH=/home/mkolar/project-midway/julia-1.5.0/bin/julia
-FNAME=sim10_o_power.jl
+JULIA=${JULIA:-julia}
+SCRATCH=${SCRATCH:-$HOME/scratch}
+PROJECT=$SLURM_SUBMIT_DIR/..
+OUT=$SCRATCH/diffTest/sim10_o_power_${1}_${2}
+LOG=$SCRATCH/output/sim10_o_power_${1}_${2}
 
 mkdir -p $OUT
-mkdir -p $TMPOUT
+mkdir -p $LOG
 
+command -v parallel > /dev/null || module load parallel
 
-parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$TMPOUT/$SLURM_JOB_NAME.err.{1} --output=$TMPOUT/$SLURM_JOB_NAME.out.{1} $JULIA_PATH $FNAME {1} ${1} ${2} $OUT ::: {1..1000}
+# one BLAS thread per worker; install and precompile once before the workers start
+export OPENBLAS_NUM_THREADS=1
+$JULIA --project=$PROJECT -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+
+parallel --delay .2 -j $SLURM_NTASKS --joblog __$SLURM_JOB_NAME.runtask.log --resume srun --exclusive -N1 -n1 --error=$LOG/$SLURM_JOB_NAME.err.{1} --output=$LOG/$SLURM_JOB_NAME.out.{1} $JULIA --project=$PROJECT sim10_o_power.jl {1} ${1} ${2} $OUT ::: {1..1000}

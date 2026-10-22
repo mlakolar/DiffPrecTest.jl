@@ -1,27 +1,25 @@
-# jl1 aggregate_results.jl /scratch/midway2/mkolar/diffTest/sim8/res_1 our_res_1
-
+# Collect the bootstrap estimates of one setting of sims 8-11 into one file:
+#
+#   julia --project=.. aggregate_results.jl $SCRATCH/diffTest/sim8/res_1 our_res_1
+#
+# reads resPath_rep.jld2 for rep = 1, ..., NUM_REP (default 1000) and writes
+# outPrefix.jld2. Missing repetitions are skipped with a warning.
 using DiffPrecTest
-using JLD
+using JLD2
 
 resPath = ARGS[1]
 outPrefix = ARGS[2]
 
-NUM_REP = 1000
+NUM_REP = parse(Int, get(ENV, "NUM_REP", "1000"))
 
-results = Vector{BootstrapEstimates}(undef, NUM_REP)
+results = BootstrapEstimates[]
 for rep=1:NUM_REP
-    global results
-    fname = "$(resPath)_$(rep).jld"
-
-    try
-      file = jldopen(fname, "r")
-      res = read(file, "boot_res")
-      close(file)
-
-      results[rep] = deepcopy(res)
-    catch
-        @show fname
+    fname = "$(resPath)_$(rep).jld2"
+    if isfile(fname)
+        push!(results, load(fname, "boot_res"))
+    else
+        @warn "missing $fname"
     end
 end
 
-@save "$(outPrefix).jld" results
+@save "$(outPrefix).jld2" results

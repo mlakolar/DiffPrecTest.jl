@@ -1,9 +1,13 @@
+# Simultaneous confidence intervals for all entries of Δ by the bootstrap, with
+# estimated supports, when Ωx = Ωy (hub structured Ωx).
+#
+#   julia --project=.. sim9.jl rep ip dir
+#
+# saves the bootstrap estimates and supports to dir/res_ip_rep.jld2
 using DiffPrecTest
-using Statistics, StatsBase, LinearAlgebra
-using SparseArrays
-using ProximalBase, CoordinateDescent, CovSel
-using Random, Distributions
-using JLD
+using LinearAlgebra, Random
+using Distributions
+using JLD2
 
 
 @show gethostname()
@@ -40,8 +44,8 @@ dist_X = MvNormal(convert(Matrix, Σ))
 
 # generate data
 Random.seed!(12346 + rep)
-X = rand(dist_X, n)'
-Y = rand(dist_X, n)'
+X = permutedims(rand(dist_X, n))
+Y = permutedims(rand(dist_X, n))
 
 Sx = Symmetric( X'X / n )
 Sy = Symmetric( Y'Y / n )
@@ -50,4 +54,4 @@ Sy = Symmetric( Y'Y / n )
 @time boot_res, eS = bootstrap(X, Y)
 
 
-@save "$(dir)/res_$(ip)_$(rep).jld" boot_res eS
+@save "$(dir)/res_$(ip)_$(rep).jld2" boot_res eS

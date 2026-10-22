@@ -1,9 +1,16 @@
+# Support recovery with p = 100 (see model.jl): thresholded refits with normal
+# (ANTSupport) and bootstrap (BootStdSupport) standard errors, and the D-trace
+# estimator path with the penalty chosen on validation data.
+#
+#   julia --project=.. sim5b.jl rep dir
+#
+# saves the estimates to dir/res_rep.jld2
 using DiffPrecTest
-using Statistics, StatsBase, LinearAlgebra
-using SparseArrays
-using ProximalBase, CoordinateDescent, CovSel
-using Random, Distributions
-using JLD
+using LinearAlgebra, Random, Statistics
+using Distributions
+using JLD2
+
+include("model.jl")
 
 rep   = parse(Int,ARGS[1])
 dir = ARGS[2]
@@ -12,42 +19,7 @@ p = 100
 n = 300
 
 # generate model
-Ωx = Matrix{Float64}(I, p, p)
-mf = [1., 0.5, 0.4]
-# block 1
-α = 1.
-bp = 1
-ep = 50
-for k=0:2
-    v = α * mf[k+1]
-    for l=bp:ep-k
-        Ωx[l  , l+k] = v
-        Ωx[l+k, l  ] = v
-    end
-end
-# block 2
-α = 2.
-bp = 51
-ep = 75
-for k=0:2
-    v = α * mf[k+1]
-    for l=bp:ep-k
-        Ωx[l  , l+k] = v
-        Ωx[l+k, l  ] = v
-    end
-end
-# block 3
-α = 4.
-bp = 76
-ep = 100
-for k=0:2
-    v = α * mf[k+1]
-    for l=bp:ep-k
-        Ωx[l  , l+k] = v
-        Ωx[l+k, l  ] = v
-    end
-end
-Ωy = Matrix(Diagonal(Ωx))
+Ωx, Ωy = sim5model(p)
 Δ = Ωx - Ωy
 
 Σx = inv(Symmetric(Ωx))
@@ -58,10 +30,10 @@ dist_Y = MvNormal(convert(Matrix, Σy))
 
 # generate data
 Random.seed!(2345 + rep)
-X = rand(dist_X, n)'
-Y = rand(dist_Y, n)'
-Xtest = rand(dist_X, n)'    # validation data for
-Ytest = rand(dist_Y, n)'
+X = permutedims(rand(dist_X, n))
+Y = permutedims(rand(dist_Y, n))
+Xtest = permutedims(rand(dist_X, n))    # validation data for the D-trace estimator
+Ytest = permutedims(rand(dist_Y, n))
 
 #################
 #
@@ -88,4 +60,4 @@ minλ = maxλ * 0.04
 
 eΔDTr, i2, iInf, loss2arr, lossInfarr = supportEstimate(DTraceValidationSupport(), Sx, Sy, Sxtest, Sytest, Λarr)
 
-@save "$(dir)/res_$(rep).jld" eΔNormal eΔNormalP eΔBoot eΔBootP eS eΔDTr i2 iInf loss2arr lossInfarr
+@save "$(dir)/res_$(rep).jld2" eΔNormal eΔNormalP eΔBoot eΔBootP eS eΔDTr i2 iInf loss2arr lossInfarr

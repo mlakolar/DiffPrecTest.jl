@@ -1,60 +1,57 @@
-using JLD
-using DiffPrecTest
-using DataFrames, CSV
-using Random, LinearAlgebra, Distributions
+# Coverage, length and bias of the confidence intervals in sim7, from the files
+# results/sim7_res_ip_iElem.jld2 written by collect.sh. Writes sim7.csv and
+# sim7_table.tex.
+#
+#   julia --project=.. summarize.jl
+using CSV
+using LinearAlgebra, Random
+using Distributions
+
+include("../summary.jl")
+
+cd(@__DIR__)
 
 pArr = [100, 200]
 elemArr = [(5,5), (8, 7), (50, 25), (22, 20), (32, 30)]
-methodArr = ["Sym-N", "Asym-N", "YinXia", "Sym-B", "Asym-B", "O-Sym-N", "O-Asym-N", "O-Sym-B", "O-Asym-B"]
 
-df = DataFrame(p = Int[], row = Int[], col = Int[], trueValue=Float64[], method=String[], bias=Float64[], coverage=Float64[], lenCI=Float64[])
+# the true difference, generated as in sim7.jl
+function trueDelta(p)
+  Random.seed!(7689)
+  Ωx = Matrix{Float64}(I, p, p)
+  for l=1:p-1
+    Ωx[l  , l+1] = 0.3
+    Ωx[l+1, l  ] = 0.3
+  end
+  for l=1:p-2
+    Ωx[l  , l+2] = 0.2
+    Ωx[l+2, l  ] = 0.2
+  end
+  Ωy = Matrix{Float64}(I, p, p) * 1.1
+  for l=1:p-1
+    Ωy[l  , l+1] = 0.3
+    Ωy[l+1, l  ] = 0.3
+  end
+  for l=1:p-2
+    Ωy[l  , l+2] = -0.1
+    Ωy[l+2, l  ] = -0.1
+  end
+  Δ = Ωx - Ωy
+  d = Vector{Float64}(undef, p)
+  rand!(Uniform(0.5, 2.5), d)
+  d .= sqrt.(d)
+  D = Diagonal(d)
+  D * Δ * D
+end
 
-
+df = newSummary()
+trueValue = zeros(Float64, 2, length(elemArr))
 for ip=1:2
-  for iElem=1:5
-    p = pArr[ip]
-    Random.seed!(7689)
-
-    # generate model
-    Ωx = Matrix{Float64}(I, p, p)
-    for l=1:p-1
-      Ωx[l  , l+1] = 0.3
-      Ωx[l+1, l  ] = 0.3
-    end
-    for l=1:p-2
-      Ωx[l  , l+2] = 0.2
-      Ωx[l+2, l  ] = 0.2
-    end
-    Ωy = Matrix{Float64}(I, p, p) * 1.1
-    for l=1:p-1
-      Ωy[l  , l+1] = 0.3
-      Ωy[l+1, l  ] = 0.3
-    end
-    for l=1:p-2
-      Ωy[l  , l+2] = -0.1
-      Ωy[l+2, l  ] = -0.1
-    end
-    Δ = Ωx - Ωy
-    # generate Delta
-    d = Vector{Float64}(undef, p)
-    rand!(Uniform(0.5, 2.5), d)
-    d .= sqrt.(d)
-    D = Diagonal(d)
-    Σx = inv(Symmetric(D * Ωx * D))
-    Σy = inv(Symmetric(D * Ωy * D))
-
-    tΔ = D * Δ * D
-
-    res = load("../sim7_res_$(ip)_$(iElem).jld", "results")
-
-    ri, ci = elemArr[iElem]
-    indE = (ci - 1) * p + ri
-
-    for j in 1:9
-      sr = computeSimulationResult([res[j, i] for i=1:1000], tΔ[indE])
-      push!(df, [pArr[ip], elemArr[iElem][1], elemArr[iElem][2], tΔ[indE], methodArr[j], sr.bias, sr.coverage, sr.lenCoverage])
-    end
+  tΔ = trueDelta(pArr[ip])
+  for iElem in eachindex(elemArr)
+    trueValue[ip, iElem] = tΔ[elemArr[iElem]...]
+    summarizeSetting!(df, "results/sim7_res_$(ip)_$(iElem).jld2", pArr[ip], elemArr[iElem], trueValue[ip, iElem])
   end
 end
 
 CSV.write("sim7.csv", df)
+coverageTable("sim7_table.tex", df, pArr[1:2], elemArr, trueValue)

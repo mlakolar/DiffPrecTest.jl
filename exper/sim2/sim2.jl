@@ -1,9 +1,13 @@
+# Coverage of confidence intervals for one entry of Δ when Ωx = Ωy (Δ = 0) with
+# Ω[i, j] = 0.9^|i - j|.
+#
+#   julia --project=.. sim2.jl rep ip iElem dir
+#
+# saves the estimates of all methods to dir/res_ip_iElem_rep.jld2
 using DiffPrecTest
-using Statistics, StatsBase, LinearAlgebra
-using SparseArrays
-using ProximalBase, CoordinateDescent, CovSel
-using Random, Distributions
-using JLD
+using LinearAlgebra, Random
+using Distributions
+using JLD2
 
 
 @show gethostname()
@@ -42,8 +46,8 @@ dist_Y = MvNormal(convert(Matrix, Σ))
 
 # generate data
 Random.seed!(134 + rep)
-X = rand(dist_X, n)'
-Y = rand(dist_Y, n)'
+X = permutedims(rand(dist_X, n))
+Y = permutedims(rand(dist_Y, n))
 
 Sx = Symmetric( X'X / n )
 Sy = Symmetric( Y'Y / n )
@@ -64,4 +68,4 @@ ri, ci = elemArr[iElem]
 @time est[9] = DiffPrecTest.estimate(AsymmetricOracleBoot(), Sx, Sy, X, Y, ri, ci, supportOracle)
 
 
-@save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld" est eΔ esuppΔ eω esuppω eSupport
+@save "$(dir)/res_$(ip)_$(iElem)_$(rep).jld2" est eΔ esuppΔ eω esuppω eSupport

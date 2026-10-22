@@ -1,22 +1,24 @@
+# The estimator of Xia, Cai and Cai (2015) for all entries of Δ along the path
+# Ωy = (1 - α) Ωx + α Ωy₁ (banded Ωx). Runs all repetitions:
+#
+#   julia --project=.. sim8_YinXia_power.jl
+#
+# saves the estimates to YinXia_power_res_ip_ialpha.jld2; set NUM_REP for fewer
+# repetitions.
 using DiffPrecTest
-using Statistics, StatsBase, LinearAlgebra
-using SparseArrays
-using ProximalBase, CoordinateDescent, CovSel
-using Random, Distributions
-using JLD
+using LinearAlgebra, Random
+using StatsBase: sample
+using Distributions
+using JLD2
 
-
-# rep   = parse(Int,ARGS[1])
-# ip    = parse(Int,ARGS[2])
-# dir = ARGS[3]
 
 alpha = 0.1:0.1:1
 pArr = [50, 100, 150]
 n = 300
-NUM_REP = 1000
+NUM_REP = parse(Int, get(ENV, "NUM_REP", "1000"))
 
-for ip=1:3
-  for ialpha=1:10
+for ip=eachindex(pArr)
+  for ialpha=eachindex(alpha)
 
     p = pArr[ip]
     Random.seed!(54298)
@@ -73,8 +75,8 @@ for ip=1:3
 
       # generate data
       Random.seed!(12346 + rep*100 + ialpha)
-      X = rand(dist_X, n)'
-      Y = rand(dist_Y, n)'
+      X = permutedims(rand(dist_X, n))
+      Y = permutedims(rand(dist_Y, n))
 
       Sx = Symmetric( X'X / n )
       Sy = Symmetric( Y'Y / n )
@@ -89,6 +91,6 @@ for ip=1:3
 
     end
 
-    @save "YinXia_power_res_$(ip)_$(ialpha).jld" res
+    @save "YinXia_power_res_$(ip)_$(ialpha).jld2" res
   end
 end

@@ -1,113 +1,57 @@
-using JLD
-using DiffPrecTest
-using DataFrames, DataFramesMeta, CSV
-using Random, LinearAlgebra, Distributions
-using LaTeXStrings, LaTeXTabulars
+# Coverage, length and bias of the confidence intervals in sim4, from the files
+# results/sim4_res_ip_iElem.jld2 written by collect.sh. Writes sim4.csv and
+# sim4_table.tex.
+#
+#   julia --project=.. summarize.jl
+using CSV
+using LinearAlgebra, Random
+using Distributions
 
-cd("exper/sim4")
+include("../summary.jl")
 
-pArr = [100, 200]
+cd(@__DIR__)
+
+pArr = [100, 200, 500]
 elemArr = [(5,5), (8, 7), (50, 25), (21, 20), (30, 30)]
-methodArr = ["Sym-N", "Asym-N", "YinXia", "Sym-B", "Asym-B", "O-Sym-N", "O-Asym-N", "O-Sym-B", "O-Asym-B"]
 
-df = DataFrame(p = Int[], row = Int[], col = Int[], trueValue=Float64[], method=String[], bias=Float64[], coverage=Float64[], lenCI=Float64[])
+# the true difference, generated as in sim4.jl
+function trueDelta(p)
+  Random.seed!(1234)
+  Ωx = Matrix{Float64}(I, p, p)
+  ρ = 0.7
+  for k=1:p-1
+    for l=1:p-k
+      Ωx[l  , l+k] = ρ^k
+      Ωx[l+k, l  ] = ρ^k
+    end
+  end
+  Δ = zeros(p, p)
+  for j=1:5
+    i = 5 + (j-1)
+    Δ[i, i] = rand(Uniform(0.1, 0.2))
+  end
+  for j=1:5
+    i = 5 + (j-1)
+    v = rand(Uniform(0.2, 0.5))
+    Δ[i  , i+1] = v
+    Δ[i+1, i  ] = v
+  end
+  d = Vector{Float64}(undef, p)
+  rand!(Uniform(0.5, 2.5), d)
+  d .= sqrt.(d)
+  D = Diagonal(d)
+  D * Δ * D
+end
 
-trueValue = zeros(Float64, 2, 5)
-
+df = newSummary()
+trueValue = zeros(Float64, 2, length(elemArr))
 for ip=1:2
-  for iElem=1:5
-    p = pArr[ip]
-    Random.seed!(1234)
-
-    # generate model
-    Ωx = Matrix{Float64}(I, p, p)
-    ρ = 0.7
-    for k=1:p-1
-      for l=1:p-k
-        Ωx[l  , l+k] = ρ^k
-        Ωx[l+k, l  ] = ρ^k
-      end
-    end
-    Δ = zeros(p, p)
-    # generate Delta
-    for j=1:5
-      i = 5 + (j-1)
-      Δ[i, i] = rand(Uniform(0.1, 0.2))
-    end
-    for j=1:5
-      i = 5 + (j-1)
-      v = rand(Uniform(0.2, 0.5))
-      Δ[i  , i+1] = v
-      Δ[i+1, i  ] = v
-    end
-    Ωy = Ωx - Δ
-    d = Vector{Float64}(undef, p)
-    rand!(Uniform(0.5, 2.5), d)
-    d .= sqrt.(d)
-    D = Diagonal(d)
-    Σx = inv(Symmetric(D * Ωx * D))
-    Σy = inv(Symmetric(D * Ωy * D))
-
-    tΔ = D * Δ * D
-
-    res = load("results/sim4_res_$(ip)_$(iElem).jld", "results")
-
-    ri, ci = elemArr[iElem]
-    indE = (ci - 1) * p + ri
-
-    trueValue[ip, iElem] = tΔ[ri, ci]
-
-    for j in 1:9
-      sr = computeSimulationResult([res[j, i] for i=1:1000], tΔ[indE])
-      push!(df, [pArr[ip], elemArr[iElem][1], elemArr[iElem][2], tΔ[indE], methodArr[j], sr.bias, sr.coverage, sr.lenCoverage])
-    end
+  tΔ = trueDelta(pArr[ip])
+  for iElem in eachindex(elemArr)
+    trueValue[ip, iElem] = tΔ[elemArr[iElem]...]
+    summarizeSetting!(df, "results/sim4_res_$(ip)_$(iElem).jld2", pArr[ip], elemArr[iElem], trueValue[ip, iElem])
   end
 end
 
 CSV.write("sim4.csv", df)
-
-
-
-### create a table 
-
-latex_tabular("sim4_table.tex",
-  Tabular("lllccc"),
-  [
-    Rule(:top),
-    ["", "", "", "Coverage", "Length", L"{\rm Bias} \times 10^3"],
-    Rule(:mid),
-    vcat([ 
-      hcat(
-        (a = fill("", 15, 1); 
-        b = latexstring("p = $(pArr[ip])");
-        a[1] = "\\multirow{15}{*}{$(b)}"; 
-        a
-        ),  
-        vcat([
-          hcat(
-            (a = fill("", 3, 1); 
-            b = latexstring("\\Delta_{$(elemArr[iElem][1]),$(elemArr[iElem][2])} = $(trueValue[ip, iElem])");
-            a[1] = "\\multirow{3}{*}{$(b)}"; 
-            a
-            ),
-            Matrix{Any}(
-              @linq df |>
-              where( (:method .== "Sym-N") .| (:method .== "YinXia") .| (:method .== "O-Sym-N"), 
-                    :p .== pArr[ip], 
-                    :row .== elemArr[iElem][1], :col .== elemArr[iElem][2]) |>  select(:method, 
-                    coverage = convert.(Int, :coverage * 1000), 
-                    lenCI = round.(:lenCI, digits=3), 
-                    bias = round.(:bias * 1000, digits=1))   
-            )
-          ) 
-          for iElem=1:5
-          ]...
-        )
-      )
-      for ip=1:2
-    ]...),
-    Rule(:bottom)
-  ]
-)
-
-
+coverageTable("sim4_table.tex", df, pArr[1:2], elemArr, trueValue)

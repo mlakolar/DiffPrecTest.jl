@@ -1,87 +1,33 @@
-#sim 6
+#!/bin/bash
 
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_1_1 sim6_res_1_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_1_2 sim6_res_1_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_1_3 sim6_res_1_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_1_4 sim6_res_1_4
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_1_5 sim6_res_1_5
+## collects the results of the coverage simulations from $SCRATCH/diffTest into
+## sim*/results, where the summarize.jl scripts read them
+##
+##   ./collect.sh [sim ...]
+##
+## collects sims 1-4, 6 and 7 unless given. JULIA (default: julia) and SCRATCH
+## (default: $HOME/scratch) can be set in the environment.
 
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_2_1 sim6_res_2_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_2_2 sim6_res_2_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_2_3 sim6_res_2_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_2_4 sim6_res_2_4
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim6/res_2_5 sim6_res_2_5
+JULIA=${JULIA:-julia}
+SCRATCH=${SCRATCH:-$HOME/scratch}
 
+cd "$(dirname "$0")"
 
+sims=${@:-1 2 3 4 6 7}
 
-
-
-
-# sim1 
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim1/res_1_1 sim1_res_1_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim1/res_1_2 sim1_res_1_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim1/res_1_3 sim1_res_1_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim1/res_2_1 sim1_res_2_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim1/res_2_2 sim1_res_2_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim1/res_2_3 sim1_res_2_3
-
-
-# sim2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim2/res_1_1 sim2_res_1_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim2/res_1_2 sim2_res_1_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim2/res_1_3 sim2_res_1_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim2/res_2_1 sim2_res_2_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim2/res_2_2 sim2_res_2_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim2/res_2_3 sim2_res_2_3
-
-# sim3 
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_1_1 sim3_res_1_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_1_2 sim3_res_1_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_1_3 sim3_res_1_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_1_4 sim3_res_1_4
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_1_5 sim3_res_1_5
-
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_2_1 sim3_res_2_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_2_2 sim3_res_2_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_2_3 sim3_res_2_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_2_4 sim3_res_2_4
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_2_5 sim3_res_2_5
-
-# # jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_3_1 sim3_res_3_1
-# # jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_3_2 sim3_res_3_2
-# # jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_3_3 sim3_res_3_3
-# # jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_3_4 sim3_res_3_4
-# # jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim3/res_3_5 sim3_res_3_5
-
-
-# sim4
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_1_1 sim4_res_1_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_1_2 sim4_res_1_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_1_3 sim4_res_1_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_1_4 sim4_res_1_4
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_1_5 sim4_res_1_5
-
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_2_1 sim4_res_2_1
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_2_2 sim4_res_2_2
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_2_3 sim4_res_2_3
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_2_4 sim4_res_2_4
-# jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim4/res_2_5 sim4_res_2_5
-
-
-
-
-
-# sim7
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_1 sim7_res_1_1
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_2 sim7_res_1_2
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_3 sim7_res_1_3
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_4 sim7_res_1_4
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_1_5 sim7_res_1_5
-
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_1 sim7_res_2_1
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_2 sim7_res_2_2
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_3 sim7_res_2_3
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_4 sim7_res_2_4
-jl1 collect_results.jl /scratch/midway2/mkolar/diffTest/sim7/res_2_5 sim7_res_2_5
-
-
+for sim in $sims
+do
+  case $sim in
+    1|2) numElem=3 ;;
+    *)   numElem=5 ;;
+  esac
+  mkdir -p sim${sim}/results
+  for ip in 1 2
+  do
+    for iElem in $(seq 1 $numElem)
+    do
+      echo "sim${sim} ${ip} ${iElem} ..."
+      $JULIA --project=. collect_results.jl $SCRATCH/diffTest/sim${sim}/res_${ip}_${iElem} sim${sim}/results/sim${sim}_res_${ip}_${iElem}
+    done
+  done
+done

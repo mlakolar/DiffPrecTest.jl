@@ -1,11 +1,14 @@
 #!/bin/bash
 
-for ip in "1" "2"
+## submits one job per setting; arguments are passed on to sbatch, e.g.
+##   ./start_sbatch.sh -p <partition>
+
+for ip in 1 2
 do
-  for iElem in "1" "2" "3"
+  for iElem in 1 2 3
   do
     echo "sbatch ${ip} ${iElem} ..."
-    sbatch --job-name=diff_sim1_${ip}_${iElem} sbatch_sim1 ${ip} ${iElem}
+    sbatch "$@" --job-name=diff_sim1_${ip}_${iElem} sbatch_sim1 ${ip} ${iElem}
     echo "... done"
   done
 done
