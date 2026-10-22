@@ -158,12 +158,7 @@ function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOption
     ##################
 
     # recompute variance
-    opt1 = CDOptions(;
-        maxIter=options.maxIter,
-        optTol=options.optTol,
-        randomize=options.randomize,
-        warmStart=true,
-        numSteps=options.numSteps)
+    opt1 = _warmStart(options)
 
     _computeVar!(ω, f, X, Y, x)
 

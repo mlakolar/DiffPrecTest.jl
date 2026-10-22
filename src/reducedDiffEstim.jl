@@ -125,12 +125,7 @@ function reducedDiffEstimation(
   ##################
 
   # recompute variance
-  opt1 = CDOptions(;
-      maxIter=options.maxIter,
-      optTol=options.optTol,
-      randomize=options.randomize,
-      warmStart=true,
-      numSteps=options.numSteps)
+  opt1 = _warmStart(options)
 
   _computeVarStep1!(ω, Sx, Sy, X, Y, x)
 
@@ -243,12 +238,7 @@ function invHessianReduced(H::Symmetric,
   ##################
 
   # recompute variance
-  opt1 = CDOptions(;
-      maxIter=options.maxIter,
-      optTol=options.optTol,
-      randomize=options.randomize,
-      warmStart=true,
-      numSteps=options.numSteps)
+  opt1 = _warmStart(options)
 
   _computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)
   ω[indRow] = 0.

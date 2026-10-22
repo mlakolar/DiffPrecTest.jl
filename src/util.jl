@@ -1,3 +1,9 @@
+# the options with warmStart = true, for the second stage of the estimators;
+# copies every field, including those that later versions of CoordinateDescent
+# add (relativeTol in 0.5)
+_warmStart(options::CDOptions) =
+  CDOptions((f === :warmStart ? true : getfield(options, f) for f in fieldnames(CDOptions))...)
+
 # quantile function of the standard normal distribution
 _normQuantile(α::Real) = -sqrt(2.) * erfcinv(2. * α)
 
