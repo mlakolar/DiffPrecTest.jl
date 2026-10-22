@@ -27,6 +27,24 @@ end
 
 CoordinateDescent.numCoordinates(f::CDInverseReducedSymKroneckerLoss) = div((f.p + 1) * f.p, 2)
 
+# second derivative of the loss along the coordinate for (r, c), r ≥ c: the
+# diagonal entry of H
+@inline function _curvature(f::CDInverseReducedSymKroneckerLoss, r, c)
+  Σx, Σy = f.Σx, f.Σy
+  @inbounds r == c ? Σx[r, r] * Σy[r, r] : (Σx[r, r] * Σy[c, c] + Σx[c, c] * Σy[r, r]) / 2 + Σx[r, c] * Σy[r, c]
+end
+
+# Scales for the stopping rule of CoordinateDescent 0.5 and later (relativeTol),
+# as for its quadratic loss: the change of coordinate k is measured as
+# |Δxₖ| √aₖ, with aₖ the curvature, and compared with optTol ⋅ maxₖ |bₖ| / √aₖ,
+# with -bₖ the derivative at zero, the indicator of ind.
+if isdefined(CoordinateDescent, :coordinateScale)
+  CoordinateDescent.coordinateScale(f::CDInverseReducedSymKroneckerLoss, k::Int) =
+    sqrt(_curvature(f, ind2subLowerTriangular(f.p, k)...))
+  CoordinateDescent.responseScale(f::CDInverseReducedSymKroneckerLoss) =
+    1 / sqrt(_curvature(f, ind2subLowerTriangular(f.p, f.ind)...))
+end
+
 
 function _A_mul_symX_mul_B_rc(
   A::Symmetric{T},
@@ -91,13 +109,10 @@ function CoordinateDescent.descendCoordinate!(
 
   ri, ci = ind2subLowerTriangular(f.p, j)
 
-  a = zero(T)
-  b = zero(T)
+  a = _curvature(f, ri, ci)
   if ri == ci
-    @inbounds a = Σx[ri,ri] * Σy[ci,ci]
     @inbounds b = A[ri,ri]
   else
-    @inbounds a = (Σx[ri,ri] * Σy[ci,ci] + Σx[ci,ci] * Σy[ri,ri]) / 2. + Σx[ri,ci] * Σy[ri,ci]
     @inbounds b = (A[ri,ci] + A[ci,ri]) / sqrt(2.)
   end
   b = j == f.ind ? b - 1. : b
@@ -258,12 +273,7 @@ function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDO
     ##################
 
     # recompute variance
-    opt1 = CDOptions(;
-        maxIter=options.maxIter,
-        optTol=options.optTol,
-        randomize=options.randomize,
-        warmStart=true,
-        numSteps=options.numSteps)
+    opt1 = _warmStart(options)
 
     _computeReducedVar!(ω, f, X, Y, x)
     ω[ind] = 0.

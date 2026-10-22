@@ -276,12 +276,7 @@ function supportEstimate(::DTraceValidationSupport,
     loss2arr[1] = CovSel.diffLoss(SxValid, x, SyValid, 2)
     lossInfarr[1] = CovSel.diffLoss(SxValid, x, SyValid, Inf)
 
-    opt = CDOptions(;
-        maxIter=options.maxIter,
-        optTol=options.optTol,
-        randomize=options.randomize,
-        warmStart=true,
-        numSteps=options.numSteps)
+    opt = _warmStart(options)
 
     for i=2:numΛ
         g = ProxL1(Λarr[i])

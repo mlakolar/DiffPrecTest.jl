@@ -126,4 +126,65 @@ end
   end
 end
 
+@testset "warm start options" begin
+  opt = CDOptions(; maxIter=7, optTol=1e-3, randomize=false, warmStart=false, numSteps=3)
+  w = DiffPrecTest._warmStart(opt)
+  @test w.warmStart
+  for f in fieldnames(CDOptions)
+    f === :warmStart || @test getfield(w, f) == getfield(opt, f)
+  end
+  if hasfield(CDOptions, :relativeTol)   # CoordinateDescent 0.5 and later
+    @test !DiffPrecTest._warmStart(CDOptions(; relativeTol=false)).relativeTol
+  end
+end
+
+# CoordinateDescent 0.5 and later measure convergence relative to scales of the loss
+if isdefined(CoordinateDescent, :coordinateScale)
+  @testset "stopping rule scales" begin
+    p = 5
+    X, Y = genData(p)
+    hSx, hSy = Symmetric(cov(X)), Symmetric(cov(Y))
+
+    # the scales are those of the quadratic loss with the same Hessian and linear term
+    A = kron(hSy, hSx)
+    t = (2-1)*p + 3
+    b = zeros(p*p)
+    b[t] = -1.
+    f = CDInverseKroneckerLoss(hSx, hSy, 3, 2)
+    fq = CDQuadraticLoss(A, b)
+    @test [CoordinateDescent.coordinateScale(f, k) for k=1:p*p] ≈ sqrt.(diag(A))
+    @test [CoordinateDescent.coordinateScale(f, k) for k=1:p*p] ≈ [CoordinateDescent.coordinateScale(fq, k) for k=1:p*p]
+    @test CoordinateDescent.responseScale(f) ≈ CoordinateDescent.responseScale(fq) ≈ 1 / sqrt(A[t, t])
+
+    H = DiffPrecTest.skron(hSx, hSy)
+    m = size(H, 1)
+    ind = sub2indLowerTriangular(p, 3, 2)
+    b = zeros(m)
+    b[ind] = -1.
+    f = CDInverseReducedSymKroneckerLoss(hSx, hSy, ind)
+    fq = CDQuadraticLoss(H, b)
+    @test [CoordinateDescent.coordinateScale(f, k) for k=1:m] ≈ sqrt.(diag(H))
+    @test [CoordinateDescent.coordinateScale(f, k) for k=1:m] ≈ [CoordinateDescent.coordinateScale(fq, k) for k=1:m]
+    @test CoordinateDescent.responseScale(f) ≈ CoordinateDescent.responseScale(fq) ≈ 1 / sqrt(H[ind, ind])
+
+    # so multiplying Σx and Σy by a divides the solution by a² and takes the same
+    # number of passes (powers of 2 keep the scaling exact)
+    for (loss, m) in (((Sx, Sy) -> CDInverseKroneckerLoss(Sx, Sy, 3, 2), p*p),
+                      ((Sx, Sy) -> CDInverseReducedSymKroneckerLoss(Sx, Sy, ind), m))
+      passes, sols = Int[], Vector{Float64}[]
+      for a in (0.25, 1.0, 4.0)
+        info = CoordinateDescent.CDInfo()
+        x = SparseIterate(m)
+        coordinateDescent!(x, loss(Symmetric(a * hSx), Symmetric(a * hSy)), ProxL1(0.05), CDOptions(; randomize=false), info)
+        @test info.converged
+        push!(passes, info.iterations)
+        push!(sols, a^2 * Vector(x))
+      end
+      @test passes[1] == passes[2] == passes[3]
+      @test sols[1] ≈ sols[2]
+      @test sols[3] ≈ sols[2]
+    end
+  end
+end
+
 end

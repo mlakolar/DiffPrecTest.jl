@@ -26,6 +26,19 @@ function CDInverseKroneckerLoss(Σx::Symmetric{T,S}, Σy::Symmetric{T,S}, a::Int
 end
 
 CoordinateDescent.numCoordinates(f::CDInverseKroneckerLoss) = f.p*f.p
+
+# second derivative of the loss along the coordinate Θ[r, c]
+@inline _curvature(f::CDInverseKroneckerLoss, r, c) = @inbounds f.Σx[r, r] * f.Σy[c, c]
+
+# Scales for the stopping rule of CoordinateDescent 0.5 and later (relativeTol),
+# as for its quadratic loss: the change of coordinate k is measured as
+# |Δxₖ| √aₖ, with aₖ the curvature, and compared with optTol ⋅ maxₖ |bₖ| / √aₖ,
+# with -bₖ the derivative at zero, the indicator of the entry (a, b).
+if isdefined(CoordinateDescent, :coordinateScale)
+  CoordinateDescent.coordinateScale(f::CDInverseKroneckerLoss, k::Int) =
+    sqrt(_curvature(f, Tuple(CartesianIndices((f.p, f.p))[k])...))
+  CoordinateDescent.responseScale(f::CDInverseKroneckerLoss) = 1 / sqrt(_curvature(f, f.a, f.b))
+end
 function CoordinateDescent.initialize!(f::CDInverseKroneckerLoss, x::SparseIterate)
 # compute residuals for the loss
 
@@ -70,9 +83,7 @@ function CoordinateDescent.descendCoordinate!(
   # ri, ci = ind2sub(Σx, j)
   ri, ci = Tuple(CartesianIndices(Σx)[j])
 
-  a = zero(T)
-  b = zero(T)
-  @inbounds a  = Σx[ri,ri] * Σy[ci,ci]
+  a = _curvature(f, ri, ci)
   @inbounds b = A[ri,ci]
   b = ri == f.a && ci == f.b ? b - 1. : b
 
@@ -204,12 +215,7 @@ function invAsymHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ
     ##################
 
     # recompute variance
-    opt1 = CDOptions(;
-        maxIter=options.maxIter,
-        optTol=options.optTol,
-        randomize=options.randomize,
-        warmStart=true,
-        numSteps=options.numSteps)
+    opt1 = _warmStart(options)
 
     _computeVar!(ω, f, X, Y, x)
     ω[(ci-1)*p + ri] = 0.

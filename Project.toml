@@ -1,7 +1,7 @@
 name = "DiffPrecTest"
 uuid = "bb4bfe13-bfd7-5c6f-a2d2-8072376c6806"
 authors = ["Mladen Kolar <mkolar@chicagobooth.edu>"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 CoordinateDescent = "c00ed354-b9be-54b8-8a23-c5ac771bc43a"
@@ -18,7 +18,7 @@ CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "master"}
 
 [compat]
 Aqua = "0.8"
-CoordinateDescent = "0.4"
+CoordinateDescent = "0.4, 0.5"
 CovSel = "0.2"
 Ipopt = "1"
 JuMP = "1"
