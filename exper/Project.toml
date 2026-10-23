@@ -20,8 +20,8 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 [sources]
 CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "proximalopt-0.2"}
 DiffPrecTest = {path = ".."}
-ProximalBase = {url = "https://github.com/mlakolar/ProximalBase.jl", rev = "proximalbase-0.5"}
-ProximalOPT = {url = "https://github.com/mlakolar/ProximalOPT.jl", rev = "generic-solvers"}
+ProximalBase = {url = "https://github.com/mlakolar/ProximalBase.jl", rev = "51a4caf303804f81edcc13e1fcbf4767ba14f6cb"}
+ProximalOPT = {url = "https://github.com/mlakolar/ProximalOPT.jl", rev = "1f82ae5a30056bd7451b870afde6aec47d556de3"}
 
 [compat]
 CSV = "1"
