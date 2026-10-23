@@ -65,7 +65,7 @@ Within each round the ratio is at most 1.04, apart from the 0.5 ms
     (job 13326410), because ProximalBase 0.5.0's `tril_cartesian` takes 3.4
     instead of 1.2 ns, and `skron` called it twice in every term.
 - **`DTraceValidationSupport`**: almost three times faster, mostly from its
-  validation losses (CovSel's `diffLoss` now multiplies dense matrices), and
+  validation losses (CovarianceSelection's `diffLoss` now multiplies dense matrices), and
   from the faster solves along the path.
 - **The solutions** agree to 2e-7, the tolerance of coordinate descent; the
   refitted estimates agree exactly.

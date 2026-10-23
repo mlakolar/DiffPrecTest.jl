@@ -50,7 +50,7 @@ see [`exper/README.md`](exper/README.md).
 The penalized estimators of the first and second stages are solved by the
 coordinate descent of [ProximalSolvers.jl](https://github.com/mlakolar/ProximalSolvers.jl),
 on losses of [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl):
-the direct difference loss of [CovSel.jl](https://github.com/mlakolar/CovSel.jl)
+the direct difference loss of [CovarianceSelection.jl](https://github.com/mlakolar/CovarianceSelection.jl)
 and the inverse Hessian losses are its `KronQuadratic`. The functions of the
 two stages (`diffEstimation`, `invQSymHessian`, `invAsymHessianEstimation`,
 `reducedDiffEstimation`, `invHessianReduced`) take the solver options as a

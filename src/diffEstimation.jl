@@ -138,7 +138,7 @@ end
 
 First stage of [`SymmetricNormal`](@ref) and [`AsymmetricNormal`](@ref):
 estimate `Δ = Ωx - Ωy` by minimizing the direct difference loss
-`tr(Sx⋅Δ⋅Sy⋅Δ)/2 - tr(Δ⋅(Sy - Sx))` (`CovSel.directDifferenceLoss`) plus a
+`tr(Sx⋅Δ⋅Sy⋅Δ)/2 - tr(Δ⋅(Sy - Sx))` (`CovarianceSelection.directDifferenceLoss`) plus a
 weighted ℓ1 penalty with level `λ`, by ProximalSolvers' coordinate descent with
 the options `method`. The weights are standard errors of the gradient
 estimated from `X` and `Y`, computed at zero and again at the first solution.

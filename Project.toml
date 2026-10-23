@@ -4,7 +4,7 @@ authors = ["Mladen Kolar <mkolar@chicagobooth.edu>"]
 version = "0.3.0"
 
 [deps]
-CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
+CovarianceSelection = "fb9f034c-9bf8-4e47-a0a4-723273363029"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
 ProximalSolvers = "fc4971f5-6616-4709-9bfc-89a819252f6b"
@@ -14,12 +14,12 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
-CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "master"}
-ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "9cdd33c968f7f835743627f2c03114772e0ad068"}
+CovarianceSelection = {url = "https://github.com/mlakolar/CovarianceSelection.jl", rev = "master"}
+ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "master"}
 
 [compat]
 Aqua = "0.8"
-CovSel = "0.2"
+CovarianceSelection = "0.1"
 Ipopt = "1"
 JuMP = "1"
 LinearAlgebra = "1"

@@ -14,7 +14,7 @@ independent samples `X` (`nx × p`) and `Y` (`ny × p`):
 module DiffPrecTest
 
 using Statistics, LinearAlgebra, SparseArrays
-using ProximalBase, CovSel
+using ProximalBase, CovarianceSelection
 using ProximalSolvers: ProximalSolvers, CDSolver, cdmodel, solve!, solve_path
 using Random
 using SpecialFunctions: erfcinv
