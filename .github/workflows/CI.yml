@@ -51,20 +51,18 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v3
-      # ProximalBase 0.5, ProximalOPT 0.2 and this CovSel are not registered yet:
-      # ProximalBase at the merge of its PR #23 into master (0.5.0, being
-      # registered), ProximalOPT at its PR #11 (1f82ae5), and the
+      # ProximalOPT 0.2 and this CovSel are not registered yet: ProximalOPT at its
+      # PR #11, as a commit, since the branch goes away when merged, and the
       # proximalopt-0.2 branch of CovSel. Julia 1.11 and later take them from
       # [sources] in Project.toml; Julia 1.10 ignores [sources], and resolves
-      # each Pkg.add with the whole project, so they are added in one call.
+      # each Pkg.add with the whole project, so both are added in one call.
       # Remove the step and [sources] once they are registered.
       - name: Add the unregistered dependencies from GitHub on Julia 1.10
         if: matrix.version == 'lts'
         shell: julia --color=yes --project=. {0}
         run: |
           using Pkg
-          Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalBase.jl", rev="51a4caf303804f81edcc13e1fcbf4767ba14f6cb"),
-                   PackageSpec(url="https://github.com/mlakolar/ProximalOPT.jl", rev="1f82ae5a30056bd7451b870afde6aec47d556de3"),
+          Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalOPT.jl", rev="aeed6002d0c791b086cc6da18c2f092f35af0439"),
                    PackageSpec(url="https://github.com/mlakolar/CovSel.jl", rev="proximalopt-0.2")])
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1

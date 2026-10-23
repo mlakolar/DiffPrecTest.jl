@@ -15,8 +15,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
 CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "proximalopt-0.2"}
-ProximalBase = {url = "https://github.com/mlakolar/ProximalBase.jl", rev = "51a4caf303804f81edcc13e1fcbf4767ba14f6cb"}
-ProximalOPT = {url = "https://github.com/mlakolar/ProximalOPT.jl", rev = "1f82ae5a30056bd7451b870afde6aec47d556de3"}
+ProximalOPT = {url = "https://github.com/mlakolar/ProximalOPT.jl", rev = "aeed6002d0c791b086cc6da18c2f092f35af0439"}
 
 [compat]
 Aqua = "0.8"
