@@ -26,9 +26,9 @@ With Julia 1.11 or later:
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ```
 
-`Project.toml` takes DiffPrecTest from this repository and CovSel from GitHub.
+`Project.toml` takes DiffPrecTest from this repository and CovarianceSelection from GitHub.
 Julia 1.10 ignores these sources; there, run
-`using Pkg; Pkg.develop(path=".."); Pkg.add(url="https://github.com/mlakolar/CovSel.jl")`
+`using Pkg; Pkg.develop(path=".."); Pkg.add(url="https://github.com/mlakolar/CovarianceSelection.jl")`
 once instead.
 
 ## Running

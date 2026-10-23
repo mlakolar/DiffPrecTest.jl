@@ -13,7 +13,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 # DiffPrecTest before it moved onto ProximalSolvers: master on 2026-10-23, with its
 # own coordinate descent losses, and CovSel master, on CoordinateDescent 0.6.0
 [sources]
-CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "6f7903408ee2826a76557e9f31ebbf135bbbc034"}
+CovSel = {url = "https://github.com/mlakolar/CovarianceSelection.jl", rev = "6f7903408ee2826a76557e9f31ebbf135bbbc034"}
 DiffPrecTest = {url = "https://github.com/mlakolar/DiffPrecTest.jl", rev = "0038089fd2d00abbf39f35f926510541fd58bc46"}
 
 [compat]

@@ -268,8 +268,8 @@ function supportEstimate(::DTraceValidationSupport,
 
     # each λ warm started from the solution at the previous one
     function validate(i, λ, x, m)
-        loss2arr[i] = CovSel.diffLoss(SxValid, x, SyValid, 2)
-        lossInfarr[i] = CovSel.diffLoss(SxValid, x, SyValid, Inf)
+        loss2arr[i] = CovarianceSelection.diffLoss(SxValid, x, SyValid, 2)
+        lossInfarr[i] = CovarianceSelection.diffLoss(SxValid, x, SyValid, Inf)
         false
     end
     path = solve_path(directDifferenceLoss(Sx, Sy), NormL1(1.0), Λarr, method;

@@ -9,7 +9,7 @@
 # sim5b.jl (variant b). Writes sim5<variant>_roc.csv, sim5<variant>_dtrace.csv
 # and sim5<variant>_roc.pdf.
 using LinearAlgebra, Statistics
-using CovSel: getConfusionMatrix, tpr, fpr, precision
+using CovarianceSelection: getConfusionMatrix, tpr, fpr, precision
 using DataFrames, CSV
 using JLD2
 using Plots

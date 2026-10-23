@@ -1,6 +1,6 @@
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
+CovarianceSelection = "fb9f034c-9bf8-4e47-a0a4-723273363029"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DiffPrecTest = "bb4bfe13-bfd7-5c6f-a2d2-8072376c6806"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -17,13 +17,13 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 # ProximalSolvers is listed for its [sources] entry, until it is registered
 [sources]
-CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "master"}
+CovarianceSelection = {url = "https://github.com/mlakolar/CovarianceSelection.jl", rev = "master"}
 DiffPrecTest = {path = ".."}
-ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "9cdd33c968f7f835743627f2c03114772e0ad068"}
+ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "master"}
 
 [compat]
 CSV = "1"
-CovSel = "0.2"
+CovarianceSelection = "0.1"
 DataFrames = "1"
 DiffPrecTest = "0.3"
 Distributions = "0.25"

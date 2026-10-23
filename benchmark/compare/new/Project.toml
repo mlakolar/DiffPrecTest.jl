@@ -1,5 +1,5 @@
 [deps]
-CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
+CovarianceSelection = "fb9f034c-9bf8-4e47-a0a4-723273363029"
 DiffPrecTest = "bb4bfe13-bfd7-5c6f-a2d2-8072376c6806"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
@@ -11,12 +11,12 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
-CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "master"}
+CovarianceSelection = {url = "https://github.com/mlakolar/CovarianceSelection.jl", rev = "master"}
 DiffPrecTest = {path = "../../.."}
-ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "9cdd33c968f7f835743627f2c03114772e0ad068"}
+ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "master"}
 
 [compat]
-CovSel = "0.2"
+CovarianceSelection = "0.1"
 DiffPrecTest = "0.3"
 ProximalBase = "0.5"
 ProximalSolvers = "0.1"
