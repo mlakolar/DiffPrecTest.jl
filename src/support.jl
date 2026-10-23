@@ -41,7 +41,7 @@ struct DTraceValidationSupport <: DiffPrecSupport end
 #
 ####################################
 
-# For each entry of the lower triangle of Δ, in the order of sub2indLowerTriangular,
+# For each entry of the lower triangle of Δ, in the order of tril_index,
 # the indices into svec(Δ) of the union of the supports of the first stage estimate
 # of Δ and of the second stage estimate of the row of the inverse Hessian.
 function __initSupport(
@@ -63,7 +63,7 @@ function __initSupport(
     ind = 0
     for ci=1:p
       for ri=ci:p
-        indElem = sub2indLowerTriangular(p, ri, ci)
+        indElem = tril_index(p, ri, ci)
         x2 = invHessianReduced(H, indElem, Sx, Sy, X, Y, λ)
         S2 = getReducedSupport(x2)
         ind = ind + 1
@@ -81,7 +81,7 @@ _linearSupport(row, col, S::AbstractMatrix{Bool}, p) = getLinearSupport(row, col
 function _linearSupport(row, col, S::AbstractVector{<:Integer}, p)
     supp = Vector{Int64}()
     for k in S
-        r, c = ind2subLowerTriangular(p, k)
+        r, c = tril_cartesian(p, k)
         push!(supp, (c-1)*p + r)
         if r != c
             push!(supp, (r-1)*p + c)
@@ -161,7 +161,7 @@ Estimate the support of `Δ = Ωx - Ωy` with `method` one of
 triangle is refitted and kept when it exceeds `τ` times its standard error.
 Returns `(Δsupp, Δpoint, eS)`: the thresholded estimate as a sparse `p × p`
 matrix (a vector of them when `τ` is a vector of thresholds), the refitted
-entries in the order of `ProximalBase.sub2indLowerTriangular`, and the supports
+entries in the order of `ProximalBase.tril_index`, and the supports
 used for the refits.
 
 `estimSupport` gives the support used to refit each entry, as computed by the
@@ -169,7 +169,7 @@ first and second stage estimators unless given: a vector with one element per
 entry of the lower triangle, either a vector of indices into `svec(Δ)` or a
 symmetric `p × p` Bool matrix.
 
-    supportEstimate(DTraceValidationSupport(), Sx, Sy, SxValid, SyValid, Λarr, options=CDOptions())
+    supportEstimate(DTraceValidationSupport(), Sx, Sy, SxValid, SyValid, Λarr, method=CDSolver())
 
 Compute the ℓ1 penalized direct difference estimator from the covariances `Sx`,
 `Sy` for each penalty parameter in `Λarr` (in decreasing order) and evaluate the
@@ -260,31 +260,21 @@ function supportEstimate(::DTraceValidationSupport,
     Sx::Symmetric, Sy::Symmetric,
     SxValid::Symmetric, SyValid::Symmetric,
     Λarr::Vector{Float64},
-    options=CDOptions())
-
+    method::CDSolver=CDSolver())
 
     numΛ = length(Λarr)
-    eΔarr = Vector{SparseMatrixCSC{Float64,Int64}}(undef, numΛ)
     loss2arr = Vector{Float64}(undef, numΛ)
     lossInfarr = Vector{Float64}(undef, numΛ)
 
-    f = CDDirectDifferenceLoss(Sx, Sy)
-    x = SymmetricSparseIterate(f.p)
-    g = ProxL1(Λarr[1])
-    coordinateDescent!(x, f, g, options)
-    eΔarr[1] = sparse(Matrix(x))
-    loss2arr[1] = CovSel.diffLoss(SxValid, x, SyValid, 2)
-    lossInfarr[1] = CovSel.diffLoss(SxValid, x, SyValid, Inf)
-
-    opt = _warmStart(options)
-
-    for i=2:numΛ
-        g = ProxL1(Λarr[i])
-        coordinateDescent!(x, f, g, opt)
-        eΔarr[i] = sparse(Matrix(x))
+    # each λ warm started from the solution at the previous one
+    function validate(i, λ, x, m)
         loss2arr[i] = CovSel.diffLoss(SxValid, x, SyValid, 2)
         lossInfarr[i] = CovSel.diffLoss(SxValid, x, SyValid, Inf)
+        false
     end
+    path = solve_path(directDifferenceLoss(Sx, Sy), NormL1(1.0), Λarr, method;
+                      x=SymmetricSparseIterate(size(Sx, 1)), screening=false, callback=validate)
+    eΔarr = path.solutions
 
     # find min loss
     i2 = argmin(loss2arr)

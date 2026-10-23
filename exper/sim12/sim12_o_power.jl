@@ -6,7 +6,7 @@
 # saves the bootstrap estimates to dir/res_rep.jld2
 using DiffPrecTest
 using LinearAlgebra, Random
-using ProximalBase: sub2indLowerTriangular
+using ProximalBase: tril_index
 using Distributions
 using JLD2
 
@@ -69,7 +69,7 @@ Sy = Symmetric( Y'Y / n )
 
 # oracle supports: the nonzero entries of Δ as indices into svec(Δ); bootstrap
 # reorders each support, so every entry gets its own copy
-S = [sub2indLowerTriangular(p, r, c) for c = 1:p for r = c:p if abs(Δ[r, c]) > 1e-4]
+S = [tril_index(p, r, c) for c = 1:p for r = c:p if abs(Δ[r, c]) > 1e-4]
 eS_init = [copy(S) for j=1:div((p + 1)*p, 2)]
 
 @time boot_res, eS = bootstrap(X, Y; estimSupport=eS_init)

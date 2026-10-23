@@ -47,6 +47,12 @@ CI = simulCIstudentized(straps, 0.95)
 The `exper/` folder holds the simulation scripts, with their own environment;
 see [`exper/README.md`](exper/README.md).
 
-Package depends on [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl),
-[CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl) and
-[CovSel.jl](https://github.com/mlakolar/CovSel.jl).
+The penalized estimators of the first and second stages are solved by the
+coordinate descent of [ProximalOPT.jl](https://github.com/mlakolar/ProximalOPT.jl),
+on losses of [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl):
+the direct difference loss of [CovSel.jl](https://github.com/mlakolar/CovSel.jl)
+and the inverse Hessian losses are its `KronQuadratic`. The functions of the
+two stages (`diffEstimation`, `invQSymHessian`, `invAsymHessianEstimation`,
+`reducedDiffEstimation`, `invHessianReduced`) take the solver options as a
+ProximalOPT `CDSolver`. `SeparateNormal` uses the lasso of
+[CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl).

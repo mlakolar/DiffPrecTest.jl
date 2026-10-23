@@ -2,7 +2,7 @@
     BootstrapEstimates
 
 Refitted estimates `Δhat` of `svec(Δ)`, the lower triangle of `Δ` in the order
-of `ProximalBase.sub2indLowerTriangular` with the off-diagonal entries multiplied
+of `ProximalBase.tril_index` with the off-diagonal entries multiplied
 by `√2`, and their bootstrap replicates `Δb`, one replicate per column.
 """
 struct BootstrapEstimates
@@ -51,7 +51,7 @@ function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Vector{Vect
   for col=1:p
     for row=col:p
       it = it + 1
-      indElem = sub2indLowerTriangular(p, row, col)
+      indElem = tril_index(p, row, col)
       # tmp = estimate(ReducedOracleNormal(), Sx, Sy, X, Y, indElem, eS[it])
 
       indS = eS[it]
@@ -78,7 +78,7 @@ function bootstrap(X, Y; bootSamples::Int64=300, estimSupport::Union{Vector{Vect
     for col=1:p
       for row=col:p
         it = it + 1
-        indElem = sub2indLowerTriangular(p, row, col)
+        indElem = tril_index(p, row, col)
         # tmp = estimate(ReducedOracleNormal(), bSx, bSy, bX, bY, indexElementLinear, eS[it])
 
         indS = eS[it]

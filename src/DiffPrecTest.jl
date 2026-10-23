@@ -14,7 +14,9 @@ independent samples `X` (`nx × p`) and `Y` (`ny × p`):
 module DiffPrecTest
 
 using Statistics, LinearAlgebra, SparseArrays
-using ProximalBase, CoordinateDescent, CovSel
+using ProximalBase, CovSel
+using CoordinateDescent: lasso
+using ProximalOPT: ProximalOPT, CDSolver, cdmodel, solve!, solve_path
 using Random
 using SpecialFunctions: erfcinv
 
@@ -42,7 +44,6 @@ export
   diffEstimation, invAsymHessianEstimation, invQSymHessian, invHessianReduced,
 
   # support estimation
-  CDInverseKroneckerLoss, CDInverseReducedSymKroneckerLoss,
   ANTSupport,
   BootStdSupport,
   BootMaxSupport,
@@ -246,7 +247,7 @@ pass the first stage results of the first call to the later ones.
     estimate(method, X, Y, indElem; Sx, Sy, H, Δ, suppΔ, ω, suppω)
 
 The same with `method = ReducedNormal()` for the entry with index `indElem` in
-the lower triangle (see `ProximalBase.sub2indLowerTriangular`). Here `Δ` and `ω`
+the lower triangle (see `ProximalBase.tril_index`). Here `Δ` and `ω`
 are vectors of length `p(p+1)/2` with supports `suppΔ` and `suppω` given as
 `BitVector`s.
 
@@ -315,7 +316,7 @@ function estimate(::SymmetricNormal, X, Y, row, col;
 
   # second stage
   if ω === nothing && suppω === nothing
-    j = sub2indLowerTriangular(p, row, col)
+    j = tril_index(p, row, col)
     ω = invQSymHessian(Sx, Sy, j, X, Y, λ)
     suppω = getSupport(ω, p)
   end

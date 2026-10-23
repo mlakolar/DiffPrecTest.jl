@@ -25,7 +25,7 @@ function estimate(
   Δ = C \ b
   v = variance(ReducedOracleNormal(), Sx, Sy, X, Y, ω, indS, Δ, indS)
 
-  row, col = ind2subLowerTriangular(size(Sx, 1), indElem)
+  row, col = tril_cartesian(size(Sx, 1), indElem)
   if row == col
     return DiffPrecResultNormal(Δ[1], sqrt(v))
   else
@@ -88,52 +88,24 @@ function _computeVarStep1!(
 end
 
 """
-    reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ, options=CDOptions())
+    reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ, method=CDSolver())
 
 First stage of [`ReducedNormal`](@ref): minimize `x'Hx/2 + b'x` plus a weighted
 ℓ1 penalty with level `λ`, where `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` and
-`b = svec(Sx) - svec(Sy)`, so that `x` estimates `svec(Δ)`. The weights are
-standard errors of the gradient estimated from `X` and `Y`, computed at zero and
-again at the first solution. Returns a `SparseIterate` of length `p(p+1)/2`.
+`b = svec(Sx) - svec(Sy)`, so that `x` estimates `svec(Δ)`, by ProximalOPT's
+coordinate descent with the options `method`. The weights are standard errors
+of the gradient estimated from `X` and `Y`, computed at zero and again at the
+first solution. Returns a `SparseIterate` of length `p(p+1)/2`.
 """
 function reducedDiffEstimation(
-  H::Symmetric, 
-  b::Vector,   
+  H::Symmetric,
+  b::Vector,
   Sx::Symmetric,
   Sy::Symmetric,
-  X, Y, λ, options=CDOptions())
-  f = CDQuadraticLoss(H, b)
+  X, Y, λ, method::CDSolver=CDSolver())
   x = SparseIterate(size(H, 1))
-
-  ##################
-  #
-  #  first stage
-  #
-  ##################
-  # compute initial variance
-  ω = Array{eltype(H)}(undef, length(x))
-  _computeVarStep1!(ω, Sx, Sy, X, Y, x)
-
-  # compute initial estimate
-  g = ProxL1(λ, ω)
-  coordinateDescent!(x, f, g, options)
-
-  ##################
-  #
-  #  second stage
-  #
-  ##################
-
-  # recompute variance
-  opt1 = _warmStart(options)
-
-  _computeVarStep1!(ω, Sx, Sy, X, Y, x)
-
-  # recompute estimate
-  g = ProxL1(λ, ω)
-  coordinateDescent!(x, f, g, opt1)
-
-  return x
+  ω = zeros(size(H, 1))
+  _twoStage!(x, QuadraticFunction(H, b), λ, ω, (ω, x) -> _computeVarStep1!(ω, Sx, Sy, X, Y, x), method)
 end
 
 
@@ -194,66 +166,37 @@ end
 
 
 """
-    invHessianReduced(H, indRow, Sx, Sy, X, Y, λ, options=CDOptions())
+    invHessianReduced(H, indRow, Sx, Sy, X, Y, λ, method=CDSolver())
 
 Second stage of [`ReducedNormal`](@ref): estimate the row `indRow` of the
 inverse of `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` by minimizing `x'Hx/2 - x[indRow]`
-plus a weighted ℓ1 penalty with level `λ` that leaves `x[indRow]` unpenalized.
-The weights are standard errors of the gradient estimated from `X` and `Y`.
-Returns a `SparseIterate` of length `p(p+1)/2`.
+plus a weighted ℓ1 penalty with level `λ` that leaves `x[indRow]` unpenalized,
+by ProximalOPT's coordinate descent with the options `method`. The weights are
+standard errors of the gradient estimated from `X` and `Y`. Returns a
+`SparseIterate` of length `p(p+1)/2`.
 """
-function invHessianReduced(H::Symmetric, 
-  indRow::Int, 
+function invHessianReduced(H::Symmetric,
+  indRow::Int,
   Sx::Symmetric,
   Sy::Symmetric,
-  X, 
-  Y, 
-  λ, 
-  options=CDOptions())
+  X,
+  Y,
+  λ,
+  method::CDSolver=CDSolver())
 
   b = zeros(size(H, 1))
   b[indRow] = -1.
-  f = CDQuadraticLoss(H, b)
   x = SparseIterate(size(H, 1))
   x[indRow] = 1. / H[indRow, indRow]
-
-  ##################
-  #
-  #  first stage
-  #
-  ##################
-  # compute initial variance
-  ω = Array{eltype(H)}(undef, length(x))
-  _computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)
-  ω[indRow] = 0.
-
-  # compute initial estimate
-  g = ProxL1(λ, ω)
-  coordinateDescent!(x, f, g, options)
-
-  ##################
-  #
-  #  second stage
-  #
-  ##################
-
-  # recompute variance
-  opt1 = _warmStart(options)
-
-  _computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x)
-  ω[indRow] = 0.
-
-  # recompute estimate
-  g = ProxL1(λ, ω)
-  coordinateDescent!(x, f, g, opt1)
-
-  return x
+  ω = zeros(size(H, 1))
+  weights!(ω, x) = (_computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x); ω[indRow] = 0.; ω)
+  _twoStage!(x, QuadraticFunction(H, b), λ, ω, weights!, method)
 end
 
 ########################################################################
 
 # indElem --- index in a lower triangular part of the matrix
-#             can be obtained by sub2indLowerTriangular        
+#             can be obtained by tril_index        
 function estimate(::ReducedNormal, X, Y, indElem;
   Sx::Union{Symmetric, Nothing}=nothing,
   Sy::Union{Symmetric, Nothing}=nothing,

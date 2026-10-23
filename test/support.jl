@@ -33,7 +33,7 @@ end
     Δsupp, Δpoint, eS = supportEstimate(method, X, Y, 0.; estimSupport=eSred)
     @test eS === eSred
     @test Matrix(Δsupp) ≈ D
-    @test [Δpoint[sub2indLowerTriangular(p, r, c)].p for r=1:p, c=1:p if r >= c] ≈ [D[r, c] for r=1:p, c=1:p if r >= c]
+    @test [Δpoint[tril_index(p, r, c)].p for r=1:p, c=1:p if r >= c] ≈ [D[r, c] for r=1:p, c=1:p if r >= c]
 
     Δsupp1, _, _ = supportEstimate(method, X, Y, 0.; estimSupport=eSmat)
     @test Matrix(Δsupp1) ≈ D
@@ -43,7 +43,7 @@ end
   Δsupp, Δpoint, eS = supportEstimate(ANTSupport(), X, Y, 3.)
   @test eltype(eS) == Vector{Int64}
   for c=1:p, r=c:p
-    pt = Δpoint[sub2indLowerTriangular(p, r, c)]
+    pt = Δpoint[tril_index(p, r, c)]
     @test Δsupp[r, c] == (abs(pt.p) > 3. * pt.std ? pt.p : 0.)
     @test Δsupp[c, r] == Δsupp[r, c]
   end

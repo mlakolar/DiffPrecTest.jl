@@ -27,7 +27,7 @@ include("data.jl")
       @test estimate(SymmetricOracleBoot(), Sx, Sy, X, Y, row, col, copy(full); bootSamples=2).p ≈ D[row, col]
       @test estimate(AsymmetricOracleBoot(), Sx, Sy, X, Y, row, col, copy(full); bootSamples=2).p ≈ D[row, col]
 
-      indElem = sub2indLowerTriangular(p, max(row, col), min(row, col))
+      indElem = tril_index(p, max(row, col), min(row, col))
       @test estimate(ReducedOracleNormal(), Sx, Sy, X, Y, indElem, copy(reducedFull)).p ≈ D[row, col]
     end
   end
@@ -38,8 +38,8 @@ include("data.jl")
     for (row, col) in [(1, 1), (3, 2), (5, 1)]
       res = estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, DiffPrecTest.getLinearSupport(row, col, S))
 
-      indElem = sub2indLowerTriangular(p, row, col)
-      indS = [sub2indLowerTriangular(p, r, c) for c=1:p for r=c:p if S[r, c] || (r, c) == (row, col)]
+      indElem = tril_index(p, row, col)
+      indS = [tril_index(p, r, c) for c=1:p for r=c:p if S[r, c] || (r, c) == (row, col)]
       res1 = estimate(ReducedOracleNormal(), Sx, Sy, X, Y, indElem, indS)
 
       @test res.p ≈ res1.p
@@ -115,7 +115,7 @@ end
     @test abs(res.p - Δtrue[row, col]) < 4 * res.std
     @test estimate(SeparateNormal(), X, Y, col, row).p ≈ res.p atol=1e-6
 
-    indElem = sub2indLowerTriangular(p, row, col)
+    indElem = tril_index(p, row, col)
     res, eΔr, suppΔr, eωr, suppωr, indSr = estimate(ReducedNormal(), X, Y, indElem)
     @test res.std > 0.
     @test abs(res.p - Δtrue[row, col]) < 4 * res.std
