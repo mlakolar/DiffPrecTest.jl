@@ -17,7 +17,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 # ProximalSolvers is listed for its [sources] entry, until it is registered
 [sources]
-CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "proximalopt-0.2"}
+CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "master"}
 DiffPrecTest = {path = ".."}
 ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "9cdd33c968f7f835743627f2c03114772e0ad068"}
 

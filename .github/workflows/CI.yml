@@ -53,7 +53,7 @@ jobs:
       - uses: julia-actions/cache@v3
       # ProximalSolvers 0.1.0 and this CovSel are not registered yet: ProximalSolvers
       # at the commit it is registered from (JuliaRegistries/General#173068), and
-      # the proximalopt-0.2 branch of CovSel. Julia 1.11 and later take them from
+      # CovSel's master. Julia 1.11 and later take them from
       # [sources] in Project.toml; Julia 1.10 ignores [sources], and resolves
       # each Pkg.add with the whole project, so both are added in one call.
       # Remove the step and [sources] once they are registered.
@@ -63,7 +63,7 @@ jobs:
         run: |
           using Pkg
           Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalSolvers.jl", rev="9cdd33c968f7f835743627f2c03114772e0ad068"),
-                   PackageSpec(url="https://github.com/mlakolar/CovSel.jl", rev="proximalopt-0.2")])
+                   PackageSpec(url="https://github.com/mlakolar/CovSel.jl", rev="master")])
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
