@@ -22,6 +22,22 @@ independent Gaussian samples.
 * Support recovery: `supportEstimate` with `ANTSupport`, `BootStdSupport` or
   `DTraceValidationSupport`
 
+DiffPrecTest is one of five Julia packages for high-dimensional statistics,
+three for estimation and inference and two for the optimization beneath them:
+
+| Package | |
+|---|---|
+| [CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl) | the lasso and its paths; the group, square-root, scaled and heteroscedastic lasso; varying-coefficient models |
+| [CovarianceSelection.jl](https://github.com/mlakolar/CovarianceSelection.jl) | Gaussian graphical models: the graphical lasso, CLIME and ACLIME, precision matrices by the scaled lasso, the fused graphical lasso, and the difference of two precision matrices |
+| **DiffPrecTest.jl** (this package) | confidence intervals and tests for the difference of two precision matrices |
+| [ProximalSolvers.jl](https://github.com/mlakolar/ProximalSolvers.jl) | the solvers: coordinate descent with penalty paths, screening and active sets; proximal gradient methods, proximal Newton and ADMM |
+| [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl) | the building blocks: losses, penalties and constraints with their gradients and proximal operators, and sparse iterates; [documentation](https://mlakolar.github.io/ProximalBase.jl/dev/) with the mathematics |
+
+Most users need one of the first three. To solve a problem of your own, use
+ProximalSolvers; to write your own algorithm, ProximalBase.
+
+## Usage
+
 ```julia
 using DiffPrecTest, LinearAlgebra
 
@@ -56,10 +72,3 @@ two stages (`diffEstimation`, `invQSymHessian`, `invAsymHessianEstimation`,
 `reducedDiffEstimation`, `invHessianReduced`) take the solver options as a
 ProximalSolvers `CDSolver`; so are the node-wise lasso regressions of
 `SeparateNormal`.
-
-## Related packages
-
-- [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl): functions with gradients and proximal operators, and sparse iterates, with [documentation](https://mlakolar.github.io/ProximalBase.jl/dev/) of the closed forms.
-- [ProximalSolvers.jl](https://github.com/mlakolar/ProximalSolvers.jl): coordinate descent with penalty paths, screening and active sets, proximal gradient methods and ADMM.
-- [CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl): the lasso, group lasso, square-root and scaled lasso, and varying-coefficient models.
-- [CovSel.jl](https://github.com/mlakolar/CovSel.jl): high-dimensional Gaussian graphical models: the graphical lasso, CLIME, sparse precision matrices by the scaled lasso, the fused graphical lasso, and the direct estimation of the difference of two precision matrices.
