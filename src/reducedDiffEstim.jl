@@ -52,19 +52,23 @@ function _computeVarStep1!(
   q = zeros(nx)
   r = zeros(ny)
 
+  # the entries (row, col) of the coordinates, computed once for the inner loops
+  E = _trilEntries(size(Sx, 1))
+  EΔ = [E[Δ.nzval2ind[inz]] for inz=1:nnz(Δ)]
+
   for ri=1:length(ω)
     fill!(q, 0.)
     fill!(r, 0.)
+    e = E[ri]
 
     @inbounds for k=1:nx
       vx = view(X, k, :)
       # skron(Sy, vx_k)[ri, :] * Δ
       out = 0.
       for inz = 1:nnz(Δ)
-        indColumn = Δ.nzval2ind[inz]          
-        out += skron(Sy, vx, ri, indColumn) * Δ.nzval[inz]
+        out += skron(Sy, vx, e, EΔ[inz]) * Δ.nzval[inz]
       end
-      q[k] = out + svec(vx, vx, ri) - svec(Sy, ri)
+      q[k] = out + svec(vx, vx, e) - svec(Sy, e)
     end
 
     @inbounds for k=1:ny
@@ -72,10 +76,9 @@ function _computeVarStep1!(
       # skron(Sx, vy_k)[ri, :] * Δ
       out = 0.
       for inz = 1:nnz(Δ)
-        indColumn = Δ.nzval2ind[inz]          
-        out += skron(Sx, vy, ri, indColumn) * Δ.nzval[inz]
+        out += skron(Sx, vy, e, EΔ[inz]) * Δ.nzval[inz]
       end
-      r[k] = out + svec(Sx, ri) - svec(vy, vy, ri)
+      r[k] = out + svec(Sx, e) - svec(vy, vy, e)
     end
 
     t = mean(q)
@@ -127,30 +130,33 @@ function _computeVarStep2!(ω,
   q = zeros(nx)
   r = zeros(ny)
 
+  # the entries (row, col) of the coordinates, computed once for the inner loops
+  E = _trilEntries(size(Sx, 1))
+  EΔ = [E[Δ.nzval2ind[inz]] for inz=1:nnz(Δ)]
+
   for ri=1:length(ω)
     fill!(q, 0.)
     fill!(r, 0.)
+    e = E[ri]
 
     δ = indElem == ri ? - 1. : 0.
 
     @inbounds for k=1:nx
-      vx = view(X, k, :)    
+      vx = view(X, k, :)
       # skron(Sy, vx_k)[ri, :] * Δ
       out = 0.
       for inz = 1:nnz(Δ)
-        indColumn = Δ.nzval2ind[inz]          
-        out += skron(Sy, vx, ri, indColumn) * Δ.nzval[inz]
+        out += skron(Sy, vx, e, EΔ[inz]) * Δ.nzval[inz]
       end
       q[k] = out + δ
     end
 
     @inbounds for k=1:ny
-      vy = view(Y, k, :)      
+      vy = view(Y, k, :)
       # skron(Sx, vy_k)[ri, :] * Δ
       out = 0.
       for inz = 1:nnz(Δ)
-        indColumn = Δ.nzval2ind[inz]          
-        out += skron(Sx, vy, ri, indColumn) * Δ.nzval[inz]
+        out += skron(Sx, vy, e, EΔ[inz]) * Δ.nzval[inz]
       end
       r[k] = out + δ
     end

@@ -107,17 +107,22 @@ function variance(
     @inbounds t -= ω[ri] * (svec(Sy, indω[ri]) - svec(Sx, indω[ri]))     
   end
 
+  # the entries (row, col) of the coordinates, computed once for the loops below
+  p = size(Sx, 1)
+  Eω = [tril_cartesian(p, i) for i in indω]
+  EΔ = [tril_cartesian(p, i) for i in indΔ]
+
   # compute qk
   for k=1:nx
     v = 0.
     vx = view(X, k, :)
     for ci=1:length(indΔ)
       for ri=1:length(indω)
-        @inbounds v += skron(Sy, vx, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+        @inbounds v += skron(Sy, vx, Eω[ri], EΔ[ci]) * ω[ri] * Δ[ci]
       end
     end
-    for ri=1:length(indω)          
-      @inbounds v -= ω[ri] * (svec(Sy, indω[ri]) - svec(vx, vx, indω[ri]))
+    for ri=1:length(indω)
+      @inbounds v -= ω[ri] * (svec(Sy, Eω[ri]) - svec(vx, vx, Eω[ri]))
     end
     @inbounds q[k] = v
   end
@@ -128,11 +133,11 @@ function variance(
     vy = view(Y, k, :)
     for ci=1:length(indΔ)
       for ri=1:length(indω)
-        @inbounds v += skron(Sx, vy, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+        @inbounds v += skron(Sx, vy, Eω[ri], EΔ[ci]) * ω[ri] * Δ[ci]
       end
     end
-    for ri=1:length(indω)      
-      @inbounds v -= ω[ri] * (svec(vy, vy, indω[ri]) - svec(Sx, indω[ri]))
+    for ri=1:length(indω)
+      @inbounds v -= ω[ri] * (svec(vy, vy, Eω[ri]) - svec(Sx, Eω[ri]))
     end
     @inbounds r[k] = v
   end
