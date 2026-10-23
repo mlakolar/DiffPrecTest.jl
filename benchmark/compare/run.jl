@@ -1,7 +1,7 @@
-# The estimators of DiffPrecTest before and after the move onto ProximalOPT,
+# The estimators of DiffPrecTest before and after the move onto ProximalSolvers,
 # run by the version in the active environment: old/ (DiffPrecTest and CovSel
 # master with their own coordinate descent losses, on CoordinateDescent 0.6.0
-# and ProximalBase 0.4.1) or new/ (this checkout, on ProximalOPT 0.2 and
+# and ProximalBase 0.4.1) or new/ (this checkout, on ProximalSolvers 0.1 and
 # ProximalBase 0.5). The data come from Random and LinearAlgebra only, so that
 # both sides solve the same problems. The settings of a case (old: the default
 # options of CoordinateDescent 0.6, and for the reduced estimators, whose
@@ -27,7 +27,7 @@ if OLD
   const DEFAULT = [("old", CDOptions())]
   const MOMENTUM = [("old", CDOptions()), ("old, momentum = false", CDOptions(; momentum=false))]
 else
-  using ProximalOPT
+  using ProximalSolvers
   const DEFAULT = [("new", CDSolver())]
   const MOMENTUM = DEFAULT
 end

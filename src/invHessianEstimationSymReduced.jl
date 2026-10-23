@@ -147,7 +147,7 @@ Second stage of [`SymmetricNormal`](@ref): estimate the row `ind` of the inverse
 of `H = Q (Σx ⊗ Σy + Σy ⊗ Σx) Q' / 2`, where `ind` indexes the lower triangle
 (see `ProximalBase.tril_index`), by minimizing `θ'Hθ/2 - θ[ind]` plus a weighted
 ℓ1 penalty with level `λ` that leaves the entry `ind` unpenalized, by
-ProximalOPT's coordinate descent with the options `method`. The weights are
+ProximalSolvers' coordinate descent with the options `method`. The weights are
 standard errors of the gradient estimated from `X` and `Y`, computed at the
 starting point `e_ind / H[ind, ind]` and again at the first solution. Returns a
 `SparseIterate` of length `p(p+1)/2`.

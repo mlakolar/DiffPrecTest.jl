@@ -95,7 +95,7 @@ end
 
 First stage of [`ReducedNormal`](@ref): minimize `x'Hx/2 + b'x` plus a weighted
 ℓ1 penalty with level `λ`, where `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` and
-`b = svec(Sx) - svec(Sy)`, so that `x` estimates `svec(Δ)`, by ProximalOPT's
+`b = svec(Sx) - svec(Sy)`, so that `x` estimates `svec(Δ)`, by ProximalSolvers'
 coordinate descent with the options `method`. The weights are standard errors
 of the gradient estimated from `X` and `Y`, computed at zero and again at the
 first solution. Returns a `SparseIterate` of length `p(p+1)/2`.
@@ -177,7 +177,7 @@ end
 Second stage of [`ReducedNormal`](@ref): estimate the row `indRow` of the
 inverse of `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` by minimizing `x'Hx/2 - x[indRow]`
 plus a weighted ℓ1 penalty with level `λ` that leaves `x[indRow]` unpenalized,
-by ProximalOPT's coordinate descent with the options `method`. The weights are
+by ProximalSolvers' coordinate descent with the options `method`. The weights are
 standard errors of the gradient estimated from `X` and `Y`. Returns a
 `SparseIterate` of length `p(p+1)/2`.
 """

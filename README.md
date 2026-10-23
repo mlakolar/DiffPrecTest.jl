@@ -48,11 +48,11 @@ The `exper/` folder holds the simulation scripts, with their own environment;
 see [`exper/README.md`](exper/README.md).
 
 The penalized estimators of the first and second stages are solved by the
-coordinate descent of [ProximalOPT.jl](https://github.com/mlakolar/ProximalOPT.jl),
+coordinate descent of [ProximalSolvers.jl](https://github.com/mlakolar/ProximalSolvers.jl),
 on losses of [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl):
 the direct difference loss of [CovSel.jl](https://github.com/mlakolar/CovSel.jl)
 and the inverse Hessian losses are its `KronQuadratic`. The functions of the
 two stages (`diffEstimation`, `invQSymHessian`, `invAsymHessianEstimation`,
 `reducedDiffEstimation`, `invHessianReduced`) take the solver options as a
-ProximalOPT `CDSolver`; so are the node-wise lasso regressions of
+ProximalSolvers `CDSolver`; so are the node-wise lasso regressions of
 `SeparateNormal`.

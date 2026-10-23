@@ -1,7 +1,7 @@
-# Against the code before ProximalOPT
+# Against the code before ProximalSolvers
 
 `run.jl` times the estimators of DiffPrecTest master before the move onto
-ProximalOPT (its own coordinate descent losses, with CovSel master, on
+ProximalSolvers (its own coordinate descent losses, with CovSel master, on
 CoordinateDescent 0.6.0 and ProximalBase 0.4.1; `old/`) against this version
 (`new/`), on the same problems and seeds. `run.jl` runs one side in a fresh process;
 `ab.sh` alternates the sides over a number of rounds, since load on a shared
@@ -24,7 +24,7 @@ which has the same momentum.
 
 23 October 2026: four rounds on one core of an AMD EPYC 7513 (USC CARC
 Discovery, job 13326859), Julia 1.13.2, one BLAS thread. This version is at
-6fe3cf5, on ProximalOPT 1f82ae5 and ProximalBase 0.5.0; times are the fastest
+6fe3cf5, on ProximalOPT 1f82ae5 (now ProximalSolvers) and ProximalBase 0.5.0; times are the fastest
 medians over the rounds, in ms.
 
 | case | old | old, momentum = false | new | new / old | largest difference |
@@ -70,8 +70,8 @@ Within each round the ratio is at most 1.04, apart from the 0.5 ms
 - **The solutions** agree to 2e-7, the tolerance of coordinate descent; the
   refitted estimates agree exactly.
 
-The pull request now pins ProximalOPT to aeed600 and takes ProximalBase 0.5.1
-from the registry. Since this run, both have only changed in ways that save
-time:
+The pull request now takes ProximalSolvers 0.1.0 (ProximalOPT renamed, with
+the solver code of aeed600) and ProximalBase 0.5.1 from the registry. Since
+this run, both have only changed in ways that save time:
 - aeed600 skips the stopping scale of coordinates that did not move;
 - 0.5.1 brings back the faster `tril_cartesian`.

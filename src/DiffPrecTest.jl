@@ -15,7 +15,7 @@ module DiffPrecTest
 
 using Statistics, LinearAlgebra, SparseArrays
 using ProximalBase, CovSel
-using ProximalOPT: ProximalOPT, CDSolver, cdmodel, solve!, solve_path
+using ProximalSolvers: ProximalSolvers, CDSolver, cdmodel, solve!, solve_path
 using Random
 using SpecialFunctions: erfcinv
 
@@ -381,7 +381,7 @@ function estimate(::AsymmetricNormal, X, Y, row, col;
 end
 
 
-# The lasso ‖y - Xβ‖²/(2n) + λ‖β‖₁ of a node-wise regression, by ProximalOPT's
+# The lasso ‖y - Xβ‖²/(2n) + λ‖β‖₁ of a node-wise regression, by ProximalSolvers'
 # coordinate descent: the coefficients x, the residuals, and their standard
 # deviation σ
 function _lasso(X, y, λ)

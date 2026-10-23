@@ -3,7 +3,7 @@ module InvHessian
 using Test
 using DiffPrecTest
 using ProximalBase
-using ProximalOPT: CDSolver, solve!
+using ProximalSolvers: CDSolver, solve!
 using Random, LinearAlgebra, SparseArrays, Statistics
 
 Random.seed!(4)

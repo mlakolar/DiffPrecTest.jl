@@ -93,7 +93,7 @@ end
 Second stage of [`AsymmetricNormal`](@ref): estimate the row `(ci - 1) p + ri`
 of the inverse of `Σy ⊗ Σx` by minimizing the loss `tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[ri, ci]`
 of a `p × p` matrix `Θ` plus a weighted ℓ1 penalty with level `λ` that leaves
-that entry unpenalized, by ProximalOPT's coordinate descent with the options
+that entry unpenalized, by ProximalSolvers' coordinate descent with the options
 `method`. The weights are standard errors of the gradient estimated from `X`
 and `Y`, computed at the starting point, the indicator of the entry, and again
 at the first solution. Returns a `SparseIterate` holding `vec(Θ)`, of length

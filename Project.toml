@@ -7,7 +7,7 @@ version = "0.3.0"
 CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
-ProximalOPT = "7b454996-d86a-11e8-189a-bd4064dc21e3"
+ProximalSolvers = "fc4971f5-6616-4709-9bfc-89a819252f6b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
@@ -15,7 +15,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
 CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "proximalopt-0.2"}
-ProximalOPT = {url = "https://github.com/mlakolar/ProximalOPT.jl", rev = "aeed6002d0c791b086cc6da18c2f092f35af0439"}
+ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "9cdd33c968f7f835743627f2c03114772e0ad068"}
 
 [compat]
 Aqua = "0.8"
@@ -24,7 +24,7 @@ Ipopt = "1"
 JuMP = "1"
 LinearAlgebra = "1"
 ProximalBase = "0.5"
-ProximalOPT = "0.2"
+ProximalSolvers = "0.1"
 Random = "1"
 SparseArrays = "1"
 SpecialFunctions = "2"

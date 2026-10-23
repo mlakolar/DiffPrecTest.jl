@@ -51,9 +51,9 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v3
-      # ProximalOPT 0.2 and this CovSel are not registered yet: ProximalOPT at its
-      # PR #11, as a commit, since the branch goes away when merged, and the
-      # proximalopt-0.2 branch of CovSel. Julia 1.11 and later take them from
+      # ProximalSolvers 0.1.0 and this CovSel are not registered yet: ProximalSolvers
+      # at the commit it is registered from (JuliaRegistries/General#173068), and
+      # the proximalopt-0.2 branch of CovSel. Julia 1.11 and later take them from
       # [sources] in Project.toml; Julia 1.10 ignores [sources], and resolves
       # each Pkg.add with the whole project, so both are added in one call.
       # Remove the step and [sources] once they are registered.
@@ -62,7 +62,7 @@ jobs:
         shell: julia --color=yes --project=. {0}
         run: |
           using Pkg
-          Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalOPT.jl", rev="aeed6002d0c791b086cc6da18c2f092f35af0439"),
+          Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalSolvers.jl", rev="9cdd33c968f7f835743627f2c03114772e0ad068"),
                    PackageSpec(url="https://github.com/mlakolar/CovSel.jl", rev="proximalopt-0.2")])
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1

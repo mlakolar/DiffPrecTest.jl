@@ -4,7 +4,7 @@ using Test
 using Random, LinearAlgebra, Statistics, SparseArrays
 using JuMP, Ipopt
 using ProximalBase
-using ProximalOPT: CDSolver
+using ProximalSolvers: CDSolver
 using DiffPrecTest
 using DiffPrecTest: TwoSampleUstatistics, svec, skron
 
