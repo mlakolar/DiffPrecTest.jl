@@ -62,4 +62,4 @@ ProximalSolvers `CDSolver`; so are the node-wise lasso regressions of
 - [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl): functions with gradients and proximal operators, and sparse iterates, with [documentation](https://mlakolar.github.io/ProximalBase.jl/dev/) of the closed forms.
 - [ProximalSolvers.jl](https://github.com/mlakolar/ProximalSolvers.jl): coordinate descent with penalty paths, screening and active sets, proximal gradient methods and ADMM.
 - [CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl): the lasso, group lasso, square-root and scaled lasso, and varying-coefficient models.
-- [CovSel.jl](https://github.com/mlakolar/CovSel.jl): high-dimensional Gaussian graphical models: the graphical lasso, CLIME, the fused graphical lasso, and the direct estimation of the difference of two precision matrices.
+- [CovSel.jl](https://github.com/mlakolar/CovSel.jl): high-dimensional Gaussian graphical models: the graphical lasso, CLIME, sparse precision matrices by the scaled lasso, the fused graphical lasso, and the direct estimation of the difference of two precision matrices.
