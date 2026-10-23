@@ -3,142 +3,47 @@
 # computes row ind of inverse of (1/2) ⋅ Q (Σy ⊗ Σx + Σx ⊗ Σy) Q'
 #
 ####################################
-"""
-    CDInverseReducedSymKroneckerLoss(Σx::Symmetric, Σy::Symmetric, ind)
-
-The loss `θ'Hθ/2 - θ[ind]` with `H = Q (Σx ⊗ Σy + Σy ⊗ Σx) Q' / 2`, the Hessian
-of the direct difference loss in the half-vectorized parametrization `svec(Δ)`,
-as a `CoordinateDifferentiableFunction` of a `SparseIterate` of length
-`p(p+1)/2`. Its minimizer is the row `ind` of the inverse of `H`.
-"""
-struct CDInverseReducedSymKroneckerLoss{T<:AbstractFloat, S} <: CoordinateDifferentiableFunction
-  Σx::Symmetric{T, S}
-  Σy::Symmetric{T, S}
-  A::Matrix{T}    # stores Σx⋅Θ⋅Σy
-  ind::Int64
-  p::Int64
-end
-
-function CDInverseReducedSymKroneckerLoss(Σx::Symmetric{T,S}, Σy::Symmetric{T,S}, ind::Int) where {T<:AbstractFloat} where S
-  (issymmetric(Σx) && issymmetric(Σy)) || throw(DimensionMismatch())
-  (p = size(Σx, 1)) == size(Σy, 1) || throw(DimensionMismatch())
-  CDInverseReducedSymKroneckerLoss{T,S}(Σx, Σy, zeros(T, p, p), ind, p)
-end
-
-CoordinateDescent.numCoordinates(f::CDInverseReducedSymKroneckerLoss) = div((f.p + 1) * f.p, 2)
-
-# second derivative of the loss along the coordinate for (r, c), r ≥ c: the
-# diagonal entry of H
-@inline function _curvature(f::CDInverseReducedSymKroneckerLoss, r, c)
-  Σx, Σy = f.Σx, f.Σy
-  @inbounds r == c ? Σx[r, r] * Σy[r, r] : (Σx[r, r] * Σy[c, c] + Σx[c, c] * Σy[r, r]) / 2 + Σx[r, c] * Σy[r, c]
-end
-
-# Scales for the stopping rule of CoordinateDescent 0.5 and later (relativeTol),
-# as for its quadratic loss: the change of coordinate k is measured as
-# |Δxₖ| √aₖ, with aₖ the curvature, and compared with optTol ⋅ maxₖ |bₖ| / √aₖ,
-# with -bₖ the derivative at zero, the indicator of ind.
-if isdefined(CoordinateDescent, :coordinateScale)
-  CoordinateDescent.coordinateScale(f::CDInverseReducedSymKroneckerLoss, k::Int) =
-    sqrt(_curvature(f, ind2subLowerTriangular(f.p, k)...))
-  CoordinateDescent.responseScale(f::CDInverseReducedSymKroneckerLoss) =
-    1 / sqrt(_curvature(f, ind2subLowerTriangular(f.p, f.ind)...))
-end
-
-
-function _A_mul_symX_mul_B_rc(
-  A::Symmetric{T},
-  X::SparseIterate{T},
-  B::Symmetric{T},
-  r::Int,
-  c::Int
-  ) where {T<:AbstractFloat}
-
-  _c = sqrt(2.)
-  p = size(A, 1)
-  v = zero(T)
-  for j=1:nnz(X)
-    ind = X.nzval2ind[j]
-    ri, ci = ind2subLowerTriangular(p, ind)
-    if ri == ci
-      @inbounds v += A[ri, r] * B[ci, c] * X.nzval[j]
-    else
-      @inbounds v += (A[ri, r] * B[ci, c] + A[ci, r] * B[ri, c]) * X.nzval[j] / _c
-    end
-  end
-  v
-end
-
-function CoordinateDescent.initialize!(f::CDInverseReducedSymKroneckerLoss, x::SparseIterate)
-# compute residuals for the loss
-
-  Σx = f.Σx
-  Σy = f.Σy
-  A = f.A
-  p = f.p
-
-  for ac=1:p, ar=1:p
-      @inbounds A[ar,ac] = _A_mul_symX_mul_B_rc(Σx, x, Σy, ar, ac)
-  end
-
-  nothing
-end
-
-function CoordinateDescent.gradient(
-  f::CDInverseReducedSymKroneckerLoss{T},
-  x::SparseIterate{T},
-  j::Int64) where {T <: AbstractFloat}
-
-  A = f.A
-  ri, ci = ind2subLowerTriangular(f.p, j)
-  @inbounds v = (A[ri,ci] + A[ci,ri]) / 2.
-  v = ri == ci ? v : sqrt(2.) * v
-  return j == f.ind ? v - 1. : v
-end
-
-function CoordinateDescent.descendCoordinate!(
-  f::CDInverseReducedSymKroneckerLoss{T},
-  g::ProxL1{T},
-  x::SparseIterate{T},
-  j::Int64) where {T <: AbstractFloat}
-
-  Σx = f.Σx
-  Σy = f.Σy
-  A = f.A
+# The loss θ'Hθ/2 - θ[ind], with H = Q (Σx ⊗ Σy + Σy ⊗ Σx) Q' / 2 the Hessian of
+# the direct difference loss in the half-vectorized parametrization θ = svec(Θ)
+# of a symmetric Θ, is ⟨Θ, ΣxΘΣy⟩/2 + ⟨C, Θ⟩ as a function of Θ: ProximalBase's
+# KronQuadratic on a SymmetricSparseIterate, with C = -E_rr on the diagonal and
+# C = -(E_rc + E_cr)/√2 off it, (r, c) the entry of ind. In svec(Θ) the
+# off-diagonal entries are scaled by √2, so the penalty weight ω of θ[k] is ω on
+# Θ[r, r], and ω/√2 on each of Θ[r, c] and Θ[c, r].
+function _inverseSymKroneckerLoss(Σx::Symmetric, Σy::Symmetric, ind::Int)
   p = size(Σx, 1)
-
-  ri, ci = ind2subLowerTriangular(f.p, j)
-
-  a = _curvature(f, ri, ci)
-  if ri == ci
-    @inbounds b = A[ri,ri]
+  r, c = tril_cartesian(p, ind)
+  C = zeros(p, p)
+  if r == c
+    C[r, r] = -1.
   else
-    @inbounds b = (A[ri,ci] + A[ci,ri]) / sqrt(2.)
+    C[r, c] = C[c, r] = -1. / sqrt(2.)
   end
-  b = j == f.ind ? b - 1. : b
+  KronQuadratic(Σx, Σy, C)
+end
 
-  @inbounds oldVal = x[j]
-  a = one(T) / a
-  @inbounds x[j] -= b * a
-  newVal = cdprox!(g, x, j, a)
-  h = newVal - oldVal
-
-  # nothing to update when the coordinate did not move, as for most
-  # coordinates that stay at zero in a full pass
-  iszero(h) && return h
-
-  # update internals
-  if ri == ci
-    for ac=1:p, ar=1:p
-      @inbounds A[ar, ac] += h * Σx[ar, ri] * Σy[ri, ac]
-    end
-  else
-    _c = h / sqrt(2.)
-    for ac=1:p, ar=1:p
-      @inbounds A[ar, ac] += _c * (Σx[ar, ri] * Σy[ci, ac] + Σx[ar, ci] * Σy[ri, ac])
-    end
+# svec(Θ) of the symmetric Θ, as a SparseIterate of length p(p+1)/2
+function _svec(x::SymmetricSparseIterate{T}) where {T}
+  p = size(x, 1)
+  θ = SparseIterate(T, div(p * (p + 1), 2))
+  cx = coordinates(x)
+  for k in activecoordinates(x)
+    v = cx[k]
+    iszero(v) && continue
+    r, c = tril_cartesian(p, k)
+    θ[k] = r == c ? v : sqrt(2.) * v
   end
-  h
+  θ
+end
+
+# the weights W of the penalty on the symmetric Θ from the weights ω of svec(Θ)
+function _symWeights!(W, ω, p)
+  k = 0
+  for c=1:p, r=c:p
+    k += 1
+    W[r, c] = W[c, r] = r == c ? ω[k] : ω[k] / sqrt(2.)
+  end
+  W
 end
 
 
@@ -159,7 +64,7 @@ function _mul_symX_S(θ::SparseIterate, S::Symmetric)
     @inbounds while i <= θ.nnz
       v = θ.nzval[i]
       ind = θ.nzval2ind[i]
-      r, c = ind2subLowerTriangular(p, ind)
+      r, c = tril_cartesian(p, ind)
       if r == c
           for l=1:p
               @inbounds out[r, l] += S[c, l] * v
@@ -177,19 +82,19 @@ function _mul_symX_S(θ::SparseIterate, S::Symmetric)
 end
 
 
-function _computeReducedVar!(ω, f::CDInverseReducedSymKroneckerLoss, X, Y, Θ)
+# the weights of the penalty on svec(Θ); the entry ind is not penalized
+function _computeReducedVar!(ω, Sx, Sy, ind, X, Y, Θ)
     nx, p = size(X)
     ny    = size(Y, 1)
 
     q = zeros(nx)
     r = zeros(ny)
 
-    A = f.A
-    ind = f.ind
     _c = 1. / sqrt(2.)
 
-    ΘSx = _mul_symX_S(Θ, f.Σx)
-    ΘSy = _mul_symX_S(Θ, f.Σy)
+    ΘSx = _mul_symX_S(Θ, Sx)
+    ΘSy = _mul_symX_S(Θ, Sy)
+    A = Sx * ΘSy      # Sx⋅Θ⋅Sy
 
     V = X * ΘSy
     W = Y * ΘSx
@@ -231,60 +136,35 @@ function _computeReducedVar!(ω, f::CDInverseReducedSymKroneckerLoss, X, Y, Θ)
             ω[j] = sqrt((σ1/nx + σ2/ny))
         end
     end
-
+    ω[ind] = 0.
+    ω
 end
 
 """
-    invQSymHessian(Sx, Sy, ind, X, Y, λ, options=CDOptions())
+    invQSymHessian(Sx, Sy, ind, X, Y, λ, method=CDSolver())
 
 Second stage of [`SymmetricNormal`](@ref): estimate the row `ind` of the inverse
 of `H = Q (Σx ⊗ Σy + Σy ⊗ Σx) Q' / 2`, where `ind` indexes the lower triangle
-(see `ProximalBase.sub2indLowerTriangular`), by minimizing
-[`CDInverseReducedSymKroneckerLoss`](@ref) plus a weighted ℓ1 penalty with level
-`λ` that leaves the entry `ind` unpenalized. The weights are standard errors of
-the gradient estimated from `X` and `Y`, computed at the starting point
-`e_ind / H[ind, ind]` and again at the first solution. Returns a `SparseIterate`
-of length `p(p+1)/2`.
+(see `ProximalBase.tril_index`), by minimizing `θ'Hθ/2 - θ[ind]` plus a weighted
+ℓ1 penalty with level `λ` that leaves the entry `ind` unpenalized, by
+ProximalSolvers' coordinate descent with the options `method`. The weights are
+standard errors of the gradient estimated from `X` and `Y`, computed at the
+starting point `e_ind / H[ind, ind]` and again at the first solution. Returns a
+`SparseIterate` of length `p(p+1)/2`.
 """
-function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, options=CDOptions())
-    nx, p = size(X)
-    ny = size(Y, 1)
+function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, method::CDSolver=CDSolver())
+    p = size(X, 2)
 
-    rp = div((p+1)*p, 2)
-    f = CDInverseReducedSymKroneckerLoss(Sx, Sy, ind)
-    x = SparseIterate(rp)
-    x[ind] = 1. / skron(Sx, Sy, ind, ind)
-    CoordinateDescent.initialize!(f, x)
+    # coordinate descent on the symmetric Θ = smat(θ), which takes the steps of
+    # coordinate descent on θ
+    x = SymmetricSparseIterate(p)
+    ri, ci = tril_cartesian(p, ind)
+    θind = 1. / skron(Sx, Sy, ind, ind)
+    x[ri, ci] = ri == ci ? θind : θind / sqrt(2.)
 
-    ##################
-    #
-    #  first stage
-    #
-    ##################
-    # compute initial variance
-    ω = Array{eltype(Sx)}(undef, length(x))
-    _computeReducedVar!(ω, f, X, Y, x)
-    ω[ind] = 0.    
-
-    # compute initial estimate
-    g = ProxL1(λ, ω)
-    coordinateDescent!(x, f, g, options)
-
-    ##################
-    #
-    #  second stage
-    #
-    ##################
-
-    # recompute variance
-    opt1 = _warmStart(options)
-
-    _computeReducedVar!(ω, f, X, Y, x)
-    ω[ind] = 0.
-
-    # recompute estimate
-    g = ProxL1(λ, ω)
-    coordinateDescent!(x, f, g, opt1)
-
-    return x
+    ω = zeros(div((p+1)*p, 2))
+    W = zeros(p, p)
+    weights!(W, x) = _symWeights!(W, _computeReducedVar!(ω, Sx, Sy, ind, X, Y, _svec(x)), p)
+    _twoStage!(x, _inverseSymKroneckerLoss(Sx, Sy, ind), λ, W, weights!, method)
+    _svec(x)
 end

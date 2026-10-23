@@ -1,0 +1,23 @@
+[deps]
+CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
+DiffPrecTest = "bb4bfe13-bfd7-5c6f-a2d2-8072376c6806"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
+ProximalSolvers = "fc4971f5-6616-4709-9bfc-89a819252f6b"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[sources]
+CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "master"}
+DiffPrecTest = {path = "../../.."}
+ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "9cdd33c968f7f835743627f2c03114772e0ad068"}
+
+[compat]
+CovSel = "0.2"
+DiffPrecTest = "0.3"
+ProximalBase = "0.5"
+ProximalSolvers = "0.1"
+julia = "1.10"

@@ -13,3 +13,5 @@
 /exper/sim*/*.csv
 /exper/sim*/*.tex
 /exper/sim*/*.pdf
+/benchmark/compare/*/Manifest*.toml
+/benchmark/compare/results/

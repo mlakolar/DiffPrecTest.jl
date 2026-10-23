@@ -10,24 +10,28 @@ LaTeXTabulars = "266f59ce-6e72-579c-98bb-27b39b5c037e"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
+ProximalSolvers = "fc4971f5-6616-4709-9bfc-89a819252f6b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
+# ProximalSolvers is listed for its [sources] entry, until it is registered
 [sources]
 CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "master"}
 DiffPrecTest = {path = ".."}
+ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "9cdd33c968f7f835743627f2c03114772e0ad068"}
 
 [compat]
 CSV = "1"
 CovSel = "0.2"
 DataFrames = "1"
-DiffPrecTest = "0.2"
+DiffPrecTest = "0.3"
 Distributions = "0.25"
 JLD2 = "0.6"
 LaTeXStrings = "1"
 LaTeXTabulars = "1"
 Plots = "1"
-ProximalBase = "0.3, 0.4"
+ProximalBase = "0.5"
+ProximalSolvers = "0.1"
 StatsBase = "0.34"
 julia = "1.10"

@@ -1,0 +1,22 @@
+[deps]
+CoordinateDescent = "c00ed354-b9be-54b8-8a23-c5ac771bc43a"
+CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
+DiffPrecTest = "bb4bfe13-bfd7-5c6f-a2d2-8072376c6806"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+# DiffPrecTest before it moved onto ProximalSolvers: master on 2026-10-23, with its
+# own coordinate descent losses, and CovSel master, on CoordinateDescent 0.6.0
+[sources]
+CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "6f7903408ee2826a76557e9f31ebbf135bbbc034"}
+DiffPrecTest = {url = "https://github.com/mlakolar/DiffPrecTest.jl", rev = "0038089fd2d00abbf39f35f926510541fd58bc46"}
+
+[compat]
+CoordinateDescent = "=0.6.0"
+ProximalBase = "=0.4.1"
+julia = "1.10"

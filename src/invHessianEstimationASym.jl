@@ -1,107 +1,16 @@
 ####################################
 #
-# loss tr(Σx⋅θ⋅Σy⋅θ)/2 - tr(Θ⋅E_ab)    ---> computes inverse of (Σy ⊗ Σx)
+# loss tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[a, b]    ---> computes inverse of (Σy ⊗ Σx)
 #
 ####################################
-"""
-    CDInverseKroneckerLoss(Σx::Symmetric, Σy::Symmetric, a, b)
 
-The loss `tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[a, b]` as a `CoordinateDifferentiableFunction`
-of a `SparseIterate` holding `vec(Θ)` for a `p × p` matrix `Θ`. Its minimizer
-is the row `(b - 1) p + a` of the inverse of `Σy ⊗ Σx`.
-"""
-struct CDInverseKroneckerLoss{T<:AbstractFloat, S} <: CoordinateDifferentiableFunction
-  Σx::Symmetric{T, S}
-  Σy::Symmetric{T, S}
-  A::Matrix{T}    # stores Σx⋅Θ⋅Σy
-  a::Int
-  b::Int
-  p::Int64
-end
-
-function CDInverseKroneckerLoss(Σx::Symmetric{T,S}, Σy::Symmetric{T,S}, a::Int, b::Int) where {T<:AbstractFloat} where S
-  (issymmetric(Σx) && issymmetric(Σy)) || throw(DimensionMismatch())
-  (p = size(Σx, 1)) == size(Σy, 1) || throw(DimensionMismatch())
-  CDInverseKroneckerLoss{T,S}(Σx, Σy, zeros(T, p, p), a, b, p)
-end
-
-CoordinateDescent.numCoordinates(f::CDInverseKroneckerLoss) = f.p*f.p
-
-# second derivative of the loss along the coordinate Θ[r, c]
-@inline _curvature(f::CDInverseKroneckerLoss, r, c) = @inbounds f.Σx[r, r] * f.Σy[c, c]
-
-# Scales for the stopping rule of CoordinateDescent 0.5 and later (relativeTol),
-# as for its quadratic loss: the change of coordinate k is measured as
-# |Δxₖ| √aₖ, with aₖ the curvature, and compared with optTol ⋅ maxₖ |bₖ| / √aₖ,
-# with -bₖ the derivative at zero, the indicator of the entry (a, b).
-if isdefined(CoordinateDescent, :coordinateScale)
-  CoordinateDescent.coordinateScale(f::CDInverseKroneckerLoss, k::Int) =
-    sqrt(_curvature(f, Tuple(CartesianIndices((f.p, f.p))[k])...))
-  CoordinateDescent.responseScale(f::CDInverseKroneckerLoss) = 1 / sqrt(_curvature(f, f.a, f.b))
-end
-function CoordinateDescent.initialize!(f::CDInverseKroneckerLoss, x::SparseIterate)
-# compute residuals for the loss
-
-  Σx = f.Σx
-  Σy = f.Σy
-  A = f.A
-  p = f.p
-
-  for ac=1:p, ar=1:p
-      @inbounds A[ar,ac] = A_mul_X_mul_B_rc(Σx, x, Σy, ar, ac)
-  end
-
-  nothing
-end
-
-function CoordinateDescent.gradient(
-  f::CDInverseKroneckerLoss{T},
-  x::SparseIterate{T},
-  j::Int64) where {T <: AbstractFloat}
-
-  Σx = f.Σx
-  Σy = f.Σy
-  A = f.A
-  # ri, ci = ind2sub(Σx, j)
-  ri, ci = Tuple(CartesianIndices(Σx)[j])
-  @inbounds v = A[ri,ci]
-  return ri == f.a && ci == f.b ? v - 1. : v
-end
-
-
-function CoordinateDescent.descendCoordinate!(
-  f::CDInverseKroneckerLoss{T},
-  g::ProxL1{T},
-  x::SparseIterate{T},
-  j::Int64) where {T <: AbstractFloat}
-
-  Σx = f.Σx
-  Σy = f.Σy
-  A = f.A
-  p = size(Σx, 1)
-
-  # ri, ci = ind2sub(Σx, j)
-  ri, ci = Tuple(CartesianIndices(Σx)[j])
-
-  a = _curvature(f, ri, ci)
-  @inbounds b = A[ri,ci]
-  b = ri == f.a && ci == f.b ? b - 1. : b
-
-  @inbounds oldVal = x[j]
-  a = one(T) / a
-  @inbounds x[j] -= b * a
-  newVal = cdprox!(g, x, j, a)
-  h = newVal - oldVal
-
-  # nothing to update when the coordinate did not move, as for most
-  # coordinates that stay at zero in a full pass
-  iszero(h) && return h
-
-  # update internals
-  for ac=1:p, ar=1:p
-    @inbounds A[ar, ac] += h * Σx[ar, ri] * Σy[ci, ac]
-  end
-  h
+# The loss tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[a, b] of a p × p matrix Θ, held as vec(Θ) in a
+# SparseIterate, as ProximalBase's KronQuadratic. Its minimizer is the row
+# (b - 1) p + a of the inverse of Σy ⊗ Σx.
+function _inverseKroneckerLoss(Σx::Symmetric, Σy::Symmetric, a::Int, b::Int)
+  E = zeros(size(Σx))
+  E[a, b] = -1.
+  KronQuadratic(Σx, Σy, E)
 end
 
 
@@ -111,18 +20,15 @@ end
 #
 ############################################
 
-function _computeVarElem(
+# A = Sx⋅Θ⋅Sy
+function _computeAsymVarElem(
     q, r,
-    f::CDInverseKroneckerLoss,
+    A, a, b,
     SxΘ, ΘSy,
     X, Y, row, col)
 
     nx, p = size(X)
     ny    = size(Y, 1)
-
-    A = f.A
-    a = f.a
-    b = f.b
 
     δ = row == a && col == b ? - 1. : 0.
 
@@ -157,76 +63,47 @@ function _computeVarElem(
 
 end
 
-function _computeVar!(ω, f::CDInverseKroneckerLoss, X, Y, Θ)
+# the weights of the penalty on vec(Θ); the entry (a, b) is not penalized
+function _computeAsymVar!(ω, Sx, Sy, a, b, X, Y, Θ)
     nx, p = size(X)
     ny    = size(Y, 1)
 
     q = zeros(nx)
     r = zeros(ny)
 
-    SxΘ = _mul(f.Σx, Θ)
-    ΘSy = _mul(Θ, f.Σy)
+    SxΘ = _mul(Sx, Θ)
+    ΘSy = _mul(Θ, Sy)
+    A = SxΘ * Sy
 
     for col=1:p
         for row=1:p
             linInd = (col-1)*p + row
-            ω[linInd] = sqrt(_computeVarElem(q, r, f, SxΘ, ΘSy, X, Y, row, col))
+            ω[linInd] = sqrt(_computeAsymVarElem(q, r, A, a, b, SxΘ, ΘSy, X, Y, row, col))
         end
     end
-
+    ω[(b-1)*p + a] = 0.
+    ω
 end
 
 
 
 """
-    invAsymHessianEstimation(Sx, Sy, ri, ci, X, Y, λ, options=CDOptions())
+    invAsymHessianEstimation(Sx, Sy, ri, ci, X, Y, λ, method=CDSolver())
 
 Second stage of [`AsymmetricNormal`](@ref): estimate the row `(ci - 1) p + ri`
-of the inverse of `Σy ⊗ Σx` by minimizing [`CDInverseKroneckerLoss`](@ref) plus
-a weighted ℓ1 penalty with level `λ` that leaves that entry unpenalized. The
-weights are standard errors of the gradient estimated from `X` and `Y`, computed
-at the starting point, the indicator of the entry, and again at the first
-solution. Returns a `SparseIterate` of length `p²`.
+of the inverse of `Σy ⊗ Σx` by minimizing the loss `tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[ri, ci]`
+of a `p × p` matrix `Θ` plus a weighted ℓ1 penalty with level `λ` that leaves
+that entry unpenalized, by ProximalSolvers' coordinate descent with the options
+`method`. The weights are standard errors of the gradient estimated from `X`
+and `Y`, computed at the starting point, the indicator of the entry, and again
+at the first solution. Returns a `SparseIterate` holding `vec(Θ)`, of length
+`p²`.
 """
-function invAsymHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, options=CDOptions())
-    nx, p = size(X)
-    ny = size(Y, 1)
-
-    f = CDInverseKroneckerLoss(Sx, Sy, ri, ci)
+function invAsymHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, method::CDSolver=CDSolver())
+    p = size(X, 2)
     x = SparseIterate(p*p)
     x[(ci-1)*p + ri] = 1.
-    CoordinateDescent.initialize!(f, x)
-
-
-    ##################
-    #
-    #  first stage
-    #
-    ##################
-    # compute initial variance
-    ω = Array{eltype(Sx)}(undef, length(x))
-    _computeVar!(ω, f, X, Y, x)
-    ω[(ci-1)*p + ri] = 0.
-
-    # compute initial estimate
-    g = ProxL1(λ, ω)
-    coordinateDescent!(x, f, g, options)
-
-    ##################
-    #
-    #  second stage
-    #
-    ##################
-
-    # recompute variance
-    opt1 = _warmStart(options)
-
-    _computeVar!(ω, f, X, Y, x)
-    ω[(ci-1)*p + ri] = 0.
-
-    # recompute estimate
-    g = ProxL1(λ, ω)
-    coordinateDescent!(x, f, g, opt1)
-
-    return x
+    ω = zeros(p*p)
+    _twoStage!(x, _inverseKroneckerLoss(Sx, Sy, ri, ci), λ, ω,
+      (ω, x) -> _computeAsymVar!(ω, Sx, Sy, ri, ci, X, Y, x), method)
 end

@@ -111,8 +111,8 @@ end
 
     # lower triangle of a symmetric matrix
     θ = SparseIterate(div(p * (p + 1), 2))
-    θ[sub2indLowerTriangular(p, 2, 1)] = 0.5
-    θ[sub2indLowerTriangular(p, 4, 3)] = -0.5
+    θ[tril_index(p, 2, 1)] = 0.5
+    θ[tril_index(p, 4, 3)] = -0.5
     @test DiffPrecTest.getSupport(θ, p) == T
 
     # p × p matrix stored by columns, not symmetrized
@@ -147,7 +147,7 @@ end
     @test DiffPrecTest.makeFirst!([5, 7, 2], p, 2, 1) == [2, 5, 7]
 
     # support given by indices into svec(Δ)
-    ind = [sub2indLowerTriangular(p, 3, 1), sub2indLowerTriangular(p, 2, 2)]
+    ind = [tril_index(p, 3, 1), tril_index(p, 2, 2)]
     s1 = DiffPrecTest._linearSupport(2, 1, ind, p)
     s2 = DiffPrecTest.getLinearSupport(2, 1, S)
     @test s1[1:2] == s2[1:2]

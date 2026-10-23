@@ -1,18 +1,15 @@
 
 
 
+# A = Sx⋅Δ⋅Sy
 function _computeVarElem(
     q, r,
-    f::CDDirectDifferenceLoss,
+    Sx, Sy, A,
     SxΔ, SyΔ,
     X, Y, row, col)
 
     nx, p = size(X)
     ny    = size(Y, 1)
-
-    Sx = f.Σx
-    Sy = f.Σy
-    A = f.A
 
     fill!(q, 0.)
     fill!(r, 0.)
@@ -102,69 +99,54 @@ function _mul(S::Symmetric, θ::SymmetricSparseIterate)
 end
 
 
-function _computeVar!(ω, f::CDDirectDifferenceLoss, X, Y, Δ)
+# the weights of the penalty on Δ as a p × p matrix, symmetric
+function _computeVar!(ω, Sx, Sy, X, Y, Δ::SymmetricSparseIterate)
     nx, p = size(X)
     ny    = size(Y, 1)
 
     q = zeros(nx)
     r = zeros(ny)
 
-    SxΔ = _mul(f.Σx, Δ)
-    SyΔ = _mul(f.Σy, Δ)
+    SxΔ = _mul(Sx, Δ)
+    SyΔ = _mul(Sy, Δ)
+    A = SxΔ * Sy
 
     for col=1:p
         for row=col:p
-            linInd = sub2indLowerTriangular(p, row, col)
-            ω[linInd] = sqrt(_computeVarElem(q, r, f, SxΔ, SyΔ, X, Y, row, col))
+            ω[row, col] = ω[col, row] = sqrt(_computeVarElem(q, r, Sx, Sy, A, SxΔ, SyΔ, X, Y, row, col))
         end
     end
+    ω
+end
 
+# The estimators of both stages solve twice: with the weights ω of the ℓ1
+# penalty computed by weights!(ω, x) at the starting point x, then, warm
+# started, with the weights recomputed at the first solution.
+function _twoStage!(x, f, λ, ω, weights!, method::CDSolver)
+    m = cdmodel(f, x)
+    for stage=1:2
+        weights!(ω, x)
+        solve!(x, m, NormL1(λ, ω), method)
+    end
+    x
 end
 
 
 
 """
-    diffEstimation(Sx, Sy, X, Y, λ, options=CDOptions())
+    diffEstimation(Sx, Sy, X, Y, λ, method=CDSolver())
 
 First stage of [`SymmetricNormal`](@ref) and [`AsymmetricNormal`](@ref):
 estimate `Δ = Ωx - Ωy` by minimizing the direct difference loss
-`tr(Sx⋅Δ⋅Sy⋅Δ)/2 - tr(Δ⋅(Sy - Sx))` (`CovSel.CDDirectDifferenceLoss`) plus a
-weighted ℓ1 penalty with level `λ`. The weights are standard errors of the
-gradient estimated from `X` and `Y`, computed at zero and again at the first
-solution. Returns a `SymmetricSparseIterate`.
+`tr(Sx⋅Δ⋅Sy⋅Δ)/2 - tr(Δ⋅(Sy - Sx))` (`CovSel.directDifferenceLoss`) plus a
+weighted ℓ1 penalty with level `λ`, by ProximalSolvers' coordinate descent with
+the options `method`. The weights are standard errors of the gradient
+estimated from `X` and `Y`, computed at zero and again at the first solution.
+Returns a `SymmetricSparseIterate`.
 """
-function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, options=CDOptions())
-    f = CDDirectDifferenceLoss(Sx, Sy)
-    x = SymmetricSparseIterate(f.p)
-
-
-    ##################
-    #
-    #  first stage
-    #
-    ##################
-    # compute initial variance
-    ω = Array{eltype(Sx)}(undef, length(x))
-    _computeVar!(ω, f, X, Y, x)
-
-    # compute initial estimate
-    g = ProxL1(λ, ω)
-    coordinateDescent!(x, f, g, options)
-
-    ##################
-    #
-    #  second stage
-    #
-    ##################
-
-    # recompute variance
-    opt1 = _warmStart(options)
-
-    _computeVar!(ω, f, X, Y, x)
-
-    # recompute estimate
-    g = ProxL1(λ, ω)
-    coordinateDescent!(x, f, g, opt1)
-
-    return x
+function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, method::CDSolver=CDSolver())
+    p = size(Sx, 1)
+    x = SymmetricSparseIterate(p)
+    ω = zeros(p, p)
+    _twoStage!(x, directDifferenceLoss(Sx, Sy), λ, ω, (ω, x) -> _computeVar!(ω, Sx, Sy, X, Y, x), method)
 end

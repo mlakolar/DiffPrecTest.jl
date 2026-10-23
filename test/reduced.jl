@@ -4,7 +4,7 @@ using Test
 using Random, LinearAlgebra, Statistics, SparseArrays
 using JuMP, Ipopt
 using ProximalBase
-using CoordinateDescent: CDOptions
+using ProximalSolvers: CDSolver
 using DiffPrecTest
 using DiffPrecTest: TwoSampleUstatistics, svec, skron
 
@@ -192,7 +192,7 @@ end
   end
 
   # with a negligible penalty the estimates are the rows of inv(H) and svec(Δ)
-  opt = CDOptions(; maxIter=5000, optTol=1e-12)
+  opt = CDSolver(; maxpasses=5000, tol=1e-12)
   for j in [1, 2, 7]
     out = DiffPrecTest.invHessianReduced(H, j, Sx, Sy, X, Y, 1e-10, opt)
     @test Vector(out) ≈ inv(H)[:, j] atol=1e-6

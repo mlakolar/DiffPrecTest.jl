@@ -14,7 +14,8 @@ independent samples `X` (`nx × p`) and `Y` (`ny × p`):
 module DiffPrecTest
 
 using Statistics, LinearAlgebra, SparseArrays
-using ProximalBase, CoordinateDescent, CovSel
+using ProximalBase, CovSel
+using ProximalSolvers: ProximalSolvers, CDSolver, cdmodel, solve!, solve_path
 using Random
 using SpecialFunctions: erfcinv
 
@@ -42,7 +43,6 @@ export
   diffEstimation, invAsymHessianEstimation, invQSymHessian, invHessianReduced,
 
   # support estimation
-  CDInverseKroneckerLoss, CDInverseReducedSymKroneckerLoss,
   ANTSupport,
   BootStdSupport,
   BootMaxSupport,
@@ -246,7 +246,7 @@ pass the first stage results of the first call to the later ones.
     estimate(method, X, Y, indElem; Sx, Sy, H, Δ, suppΔ, ω, suppω)
 
 The same with `method = ReducedNormal()` for the entry with index `indElem` in
-the lower triangle (see `ProximalBase.sub2indLowerTriangular`). Here `Δ` and `ω`
+the lower triangle (see `ProximalBase.tril_index`). Here `Δ` and `ω`
 are vectors of length `p(p+1)/2` with supports `suppΔ` and `suppω` given as
 `BitVector`s.
 
@@ -315,7 +315,7 @@ function estimate(::SymmetricNormal, X, Y, row, col;
 
   # second stage
   if ω === nothing && suppω === nothing
-    j = sub2indLowerTriangular(p, row, col)
+    j = tril_index(p, row, col)
     ω = invQSymHessian(Sx, Sy, j, X, Y, λ)
     suppω = getSupport(ω, p)
   end
@@ -381,6 +381,17 @@ function estimate(::AsymmetricNormal, X, Y, row, col;
 end
 
 
+# The lasso ‖y - Xβ‖²/(2n) + λ‖β‖₁ of a node-wise regression, by ProximalSolvers'
+# coordinate descent: the coefficients x, the residuals, and their standard
+# deviation σ
+function _lasso(X, y, λ)
+  n = size(X, 1)
+  x = SparseIterate(size(X, 2))
+  solve!(x, (1 / n) * LeastSquaresLoss(y, X), NormL1(λ), CDSolver())
+  r = y - X * x
+  (x = x, residuals = r, σ = std(r))
+end
+
 function estimate(
     ::SeparateNormal,
     X,
@@ -402,8 +413,8 @@ function estimate(
   end
 
   if ri == ci
-      lasso_x_r = lasso(X[:, 1:p .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(p) / nx))
-      lasso_y_r = lasso(Y[:, 1:p .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(p) / ny))
+      lasso_x_r = _lasso(X[:, 1:p .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(p) / nx))
+      lasso_y_r = _lasso(Y[:, 1:p .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(p) / ny))
 
       T1 = 1. / lasso_x_r.σ^2.
       T2 = 1. / lasso_y_r.σ^2.
@@ -419,10 +430,10 @@ function estimate(
           ri, ci = ci, ri
       end
 
-      lasso_x_r = lasso(X[:, 1:p .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(p) / nx))
-      lasso_x_c = lasso(X[:, 1:p .!= ci], X[:, ci], 2. * sqrt(Sx[ci, ci] * log(p) / nx))
-      lasso_y_r = lasso(Y[:, 1:p .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(p) / ny))
-      lasso_y_c = lasso(Y[:, 1:p .!= ci], Y[:, ci], 2. * sqrt(Sy[ci, ci] * log(p) / ny))
+      lasso_x_r = _lasso(X[:, 1:p .!= ri], X[:, ri], 2. * sqrt(Sx[ri, ri] * log(p) / nx))
+      lasso_x_c = _lasso(X[:, 1:p .!= ci], X[:, ci], 2. * sqrt(Sx[ci, ci] * log(p) / nx))
+      lasso_y_r = _lasso(Y[:, 1:p .!= ri], Y[:, ri], 2. * sqrt(Sy[ri, ri] * log(p) / ny))
+      lasso_y_c = _lasso(Y[:, 1:p .!= ci], Y[:, ci], 2. * sqrt(Sy[ci, ci] * log(p) / ny))
 
       T1 = dot(lasso_x_r.residuals, lasso_x_c.residuals) / nx + lasso_x_r.σ^2. * lasso_x_c.x[ri] + lasso_x_c.σ^2. * lasso_x_r.x[ci-1]
       T2 = dot(lasso_y_r.residuals, lasso_y_c.residuals) / ny + lasso_y_r.σ^2. * lasso_y_c.x[ri] + lasso_y_c.σ^2. * lasso_y_r.x[ci-1]
