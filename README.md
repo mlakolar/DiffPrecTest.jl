@@ -54,5 +54,5 @@ the direct difference loss of [CovSel.jl](https://github.com/mlakolar/CovSel.jl)
 and the inverse Hessian losses are its `KronQuadratic`. The functions of the
 two stages (`diffEstimation`, `invQSymHessian`, `invAsymHessianEstimation`,
 `reducedDiffEstimation`, `invHessianReduced`) take the solver options as a
-ProximalOPT `CDSolver`. `SeparateNormal` uses the lasso of
-[CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl).
+ProximalOPT `CDSolver`; so are the node-wise lasso regressions of
+`SeparateNormal`.

@@ -1,0 +1,25 @@
+[deps]
+CovSel = "f50c8ead-2a5d-5d7a-afef-a6d87c1f6489"
+DiffPrecTest = "bb4bfe13-bfd7-5c6f-a2d2-8072376c6806"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+ProximalBase = "0a755509-c5b1-5d6f-9b24-59bcda3c37a3"
+ProximalOPT = "7b454996-d86a-11e8-189a-bd4064dc21e3"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+# new/ with ProximalBase PR #24 (the faster tril_cartesian) on top of #23
+[sources]
+CovSel = {url = "https://github.com/mlakolar/CovSel.jl", rev = "proximalopt-0.2"}
+DiffPrecTest = {path = "../../.."}
+ProximalBase = {url = "https://github.com/mlakolar/ProximalBase.jl", rev = "tril-cartesian-sqrt"}
+ProximalOPT = {url = "https://github.com/mlakolar/ProximalOPT.jl", rev = "generic-solvers"}
+
+[compat]
+CovSel = "0.2"
+DiffPrecTest = "0.3"
+ProximalBase = "0.5"
+ProximalOPT = "0.2"
+julia = "1.10"
