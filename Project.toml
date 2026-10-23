@@ -15,6 +15,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
 CovarianceSelection = {url = "https://github.com/mlakolar/CovarianceSelection.jl", rev = "master"}
+ProximalBase = {url = "https://github.com/mlakolar/ProximalBase.jl", rev = "master"}
 ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "master"}
 
 [compat]

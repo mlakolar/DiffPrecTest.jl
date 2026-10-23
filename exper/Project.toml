@@ -19,6 +19,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 [sources]
 CovarianceSelection = {url = "https://github.com/mlakolar/CovarianceSelection.jl", rev = "master"}
 DiffPrecTest = {path = ".."}
+ProximalBase = {url = "https://github.com/mlakolar/ProximalBase.jl", rev = "master"}
 ProximalSolvers = {url = "https://github.com/mlakolar/ProximalSolvers.jl", rev = "master"}
 
 [compat]

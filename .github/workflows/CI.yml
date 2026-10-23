@@ -51,17 +51,19 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v3
-      # ProximalSolvers and CovarianceSelection are not registered yet: both from
-      # their masters. Julia 1.11 and later take them from [sources] in
+      # ProximalSolvers, CovarianceSelection and the ProximalBase that
+      # CovarianceSelection needs (SliceSum, FiberSum) are not registered yet: all
+      # from their masters. Julia 1.11 and later take them from [sources] in
       # Project.toml; Julia 1.10 ignores [sources], and resolves each Pkg.add with
-      # the whole project, so both are added in one call. Remove the step and
+      # the whole project, so they are added in one call. Remove the step and
       # [sources] once they are registered.
       - name: Add the unregistered dependencies from GitHub on Julia 1.10
         if: matrix.version == 'lts'
         shell: julia --color=yes --project=. {0}
         run: |
           using Pkg
-          Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalSolvers.jl", rev="master"),
+          Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalBase.jl", rev="master"),
+                   PackageSpec(url="https://github.com/mlakolar/ProximalSolvers.jl", rev="master"),
                    PackageSpec(url="https://github.com/mlakolar/CovarianceSelection.jl", rev="master")])
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
