@@ -647,11 +647,6 @@ function estimate(
   DiffPrecResultNormal(Δab, sqrt(v))
 end
 
-
-
-
-
-
-
+include("precompile.jl")
 
 end
