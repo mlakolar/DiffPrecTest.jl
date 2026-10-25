@@ -7,7 +7,7 @@ tests = [
   "ustats",
   "skron",
   "variance",
-  "invHessian",
+  "inv_hessian",
   "reduced",
   "estimate",
   "support",
@@ -19,6 +19,10 @@ tests = [
     f = "$t.jl"
     println("* running $f ...")
     include(f)
+  end
+
+  @testset "deprecated API" begin
+    run(`$(Base.julia_cmd()) --startup-file=no --depwarn=yes --project=$(dirname(Base.active_project())) $(joinpath(@__DIR__, "deprecated.jl"))`)
   end
 
   @testset "Aqua" begin

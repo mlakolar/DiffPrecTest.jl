@@ -18,11 +18,11 @@ NUM_REP = parse(Int, get(ENV, "NUM_REP", "1000"))
 covers(CI) = all(CI[:, 1] .<= 0 .<= CI[:, 2])
 
 function coverage(res::Vector{BootstrapEstimates}, α::Float64=0.95)
-    mean(covers(simulCI(r, α)) for r in res)
+    mean(covers(simul_ci(r, α)) for r in res)
 end
 
 function coverage_studentized(res::Vector{BootstrapEstimates}, α::Float64=0.95)
-    mean(covers(simulCIstudentized(r, α)) for r in res)
+    mean(covers(simul_ci_studentized(r, α)) for r in res)
 end
 
 # loads folderName_rep.jld2 for the available repetitions

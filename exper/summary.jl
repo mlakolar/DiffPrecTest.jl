@@ -14,8 +14,8 @@ newSummary() = DataFrame(p = Int[], row = Int[], col = Int[], trueValue=Float64[
 function summarizeSetting!(df, file, p, (row, col), trueValue)
   res = load(file, "results")
   for j in eachindex(methodArr)
-    sr = computeSimulationResult([res[j, i] for i=1:size(res, 2)], trueValue)
-    push!(df, (p, row, col, trueValue, methodArr[j], sr.bias, sr.coverage, sr.lenCoverage))
+    sr = compute_simulation_result([res[j, i] for i=1:size(res, 2)], trueValue)
+    push!(df, (p, row, col, trueValue, methodArr[j], sr.bias, sr.coverage, sr.len_coverage))
   end
   df
 end

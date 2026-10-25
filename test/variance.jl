@@ -9,7 +9,7 @@ Random.seed!(134)
 
 # variance of ω'(H Δ - (Sy - Sx)) computed with dense matrices, where hess(A, B)
 # is the Hessian H for the covariances A of X and B of Y
-function varianceAlt(
+function variance_alt(
     hess,
     Sx,
     Sy,
@@ -49,10 +49,10 @@ function varianceAlt(
     return σ1/nx + σ2/ny
 end
 
-symHessian(A, B) = (kron(A, B) + kron(B, A)) / 2.
-asymHessian(A, B) = kron(B, A)
+sym_hessian(A, B) = (kron(A, B) + kron(B, A)) / 2.
+asym_hessian(A, B) = kron(B, A)
 
-function sampleData(n)
+function sample_data(n)
     Ωx = [1. 0.4; 0.4 1]
     Ωy = [1. 0.3; 0.3 1]
     X = randn(n, 2) / cholesky(Ωx).U'
@@ -62,45 +62,45 @@ end
 
 @testset "sym variance" begin
     n = 100
-    X, Y = sampleData(n)
+    X, Y = sample_data(n)
 
     Sx = Symmetric( X'X / n )
     Sy = Symmetric( Y'Y / n )
 
     ind = [1, 2, 3, 4]
-    H = symHessian(Sx, Sy)
+    H = sym_hessian(Sx, Sy)
     tmp = zeros(length(ind))
     tmp[1] = 1.
     ω = H \ tmp
     Δ = H \ (Sy[ind] - Sx[ind])
 
-    @test variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind, Δ, ind) ≈ varianceAlt(symHessian, Sx, Sy, X, Y, ω, ind, Δ, ind)
+    @test variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind, Δ, ind) ≈ variance_alt(sym_hessian, Sx, Sy, X, Y, ω, ind, Δ, ind)
 
     # different supports for ω and Δ
     ω = randn(3)
     Δ = randn(2)
-    @test variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3]) ≈ varianceAlt(symHessian, Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3])
+    @test variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3]) ≈ variance_alt(sym_hessian, Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3])
 end
 
 @testset "asym variance" begin
     n = 100
-    X, Y = sampleData(n)
+    X, Y = sample_data(n)
 
     Sx = Symmetric( X'X / n )
     Sy = Symmetric( Y'Y / n )
 
     ind = [1, 2, 3, 4]
-    H = asymHessian(Sx, Sy)
+    H = asym_hessian(Sx, Sy)
     tmp = zeros(length(ind))
     tmp[1] = 1.
     ω = H \ tmp
     Δ = H \ (Sy[ind] - Sx[ind])
 
-    @test variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind, Δ, ind) ≈ varianceAlt(asymHessian, Sx, Sy, X, Y, ω, ind, Δ, ind)
+    @test variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind, Δ, ind) ≈ variance_alt(asym_hessian, Sx, Sy, X, Y, ω, ind, Δ, ind)
 
     ω = randn(3)
     Δ = randn(2)
-    @test variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3]) ≈ varianceAlt(asymHessian, Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3])
+    @test variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3]) ≈ variance_alt(asym_hessian, Sx, Sy, X, Y, ω, [1, 2, 4], Δ, [2, 3])
 end
 
 end

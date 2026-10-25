@@ -10,7 +10,7 @@
 # C = -(E_rc + E_cr)/√2 off it, (r, c) the entry of ind. In svec(Θ) the
 # off-diagonal entries are scaled by √2, so the penalty weight ω of θ[k] is ω on
 # Θ[r, r], and ω/√2 on each of Θ[r, c] and Θ[c, r].
-function _inverseSymKroneckerLoss(Σx::Symmetric, Σy::Symmetric, ind::Int)
+function _inverse_sym_kronecker_loss(Σx::Symmetric, Σy::Symmetric, ind::Int)
   p = size(Σx, 1)
   r, c = tril_cartesian(p, ind)
   C = zeros(p, p)
@@ -37,7 +37,7 @@ function _svec(x::SymmetricSparseIterate{T}) where {T}
 end
 
 # the weights W of the penalty on the symmetric Θ from the weights ω of svec(Θ)
-function _symWeights!(W, ω, p)
+function _sym_weights!(W, ω, p)
   k = 0
   for c=1:p, r=c:p
     k += 1
@@ -49,11 +49,11 @@ end
 
 ############################################
 #
-#   compressed version of invHessian
+#   compressed version of inv_hessian
 #
 ############################################
 
-function _mul_symX_S(θ::SparseIterate, S::Symmetric)
+function _mul_sym_x_s(θ::SparseIterate, S::Symmetric)
     p = size(S, 1)
     rp = length(θ)
     _c = 1. / sqrt(2.)
@@ -83,7 +83,7 @@ end
 
 
 # the weights of the penalty on svec(Θ); the entry ind is not penalized
-function _computeReducedVar!(ω, Sx, Sy, ind, X, Y, Θ)
+function _compute_reduced_var!(ω, Sx, Sy, ind, X, Y, Θ)
     nx, p = size(X)
     ny    = size(Y, 1)
 
@@ -92,8 +92,8 @@ function _computeReducedVar!(ω, Sx, Sy, ind, X, Y, Θ)
 
     _c = 1. / sqrt(2.)
 
-    ΘSx = _mul_symX_S(Θ, Sx)
-    ΘSy = _mul_symX_S(Θ, Sy)
+    ΘSx = _mul_sym_x_s(Θ, Sx)
+    ΘSy = _mul_sym_x_s(Θ, Sy)
     A = Sx * ΘSy      # Sx⋅Θ⋅Sy
 
     V = X * ΘSy
@@ -141,7 +141,7 @@ function _computeReducedVar!(ω, Sx, Sy, ind, X, Y, Θ)
 end
 
 """
-    invQSymHessian(Sx, Sy, ind, X, Y, λ, method=CDSolver())
+    inv_q_sym_hessian(Sx, Sy, ind, X, Y, λ, method=CDSolver())
 
 Second stage of [`SymmetricNormal`](@ref): estimate the row `ind` of the inverse
 of `H = Q (Σx ⊗ Σy + Σy ⊗ Σx) Q' / 2`, where `ind` indexes the lower triangle
@@ -152,7 +152,7 @@ standard errors of the gradient estimated from `X` and `Y`, computed at the
 starting point `e_ind / H[ind, ind]` and again at the first solution. Returns a
 `SparseIterate` of length `p(p+1)/2`.
 """
-function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, method::CDSolver=CDSolver())
+function inv_q_sym_hessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, method::CDSolver=CDSolver())
     p = size(X, 2)
 
     # coordinate descent on the symmetric Θ = smat(θ), which takes the steps of
@@ -164,7 +164,7 @@ function invQSymHessian(Sx::Symmetric, Sy::Symmetric, ind, X, Y, λ, method::CDS
 
     ω = zeros(div((p+1)*p, 2))
     W = zeros(p, p)
-    weights!(W, x) = _symWeights!(W, _computeReducedVar!(ω, Sx, Sy, ind, X, Y, _svec(x)), p)
-    _twoStage!(x, _inverseSymKroneckerLoss(Sx, Sy, ind), λ, W, weights!, method)
+    weights!(W, x) = _sym_weights!(W, _compute_reduced_var!(ω, Sx, Sy, ind, X, Y, _svec(x)), p)
+    _two_stage!(x, _inverse_sym_kronecker_loss(Sx, Sy, ind), λ, W, weights!, method)
     _svec(x)
 end

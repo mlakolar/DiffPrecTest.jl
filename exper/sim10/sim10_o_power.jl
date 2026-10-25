@@ -83,6 +83,6 @@ Sy = Symmetric( Y'Y / n )
 S = [tril_index(p, r, c) for c = 1:p for r = c:p if abs(Δ[r, c]) > 1e-4]
 eS_init = [copy(S) for j=1:div((p + 1)*p, 2)]
 
-@time boot_res, eS = bootstrap(X, Y; estimSupport=eS_init)
+@time boot_res, e_s = bootstrap(X, Y; estim_support=eS_init)
 
 @save "$(dir)/res_$(rep).jld2" boot_res

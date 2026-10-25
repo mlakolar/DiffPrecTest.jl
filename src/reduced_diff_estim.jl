@@ -11,21 +11,21 @@ function estimate(
   Sy::Symmetric,
   X,
   Y,
-  indElem,  
-  indS::Vector{Int64}
+  ind_elem,
+  ind_s::Vector{Int64}
   )
 
-  makeFirst!(indS, indElem)
-  C = skron(Sx, Sy, indS)
-  b = svec(Sy, indS) - svec(Sx, indS)
+  make_first!(ind_s, ind_elem)
+  C = skron(Sx, Sy, ind_s)
+  b = svec(Sy, ind_s) - svec(Sx, ind_s)
 
-  tmp = zeros(length(indS))
+  tmp = zeros(length(ind_s))
   tmp[1] = 1.
   ω = C \ tmp
   Δ = C \ b
-  v = variance(ReducedOracleNormal(), Sx, Sy, X, Y, ω, indS, Δ, indS)
+  v = variance(ReducedOracleNormal(), Sx, Sy, X, Y, ω, ind_s, Δ, ind_s)
 
-  row, col = tril_cartesian(size(Sx, 1), indElem)
+  row, col = tril_cartesian(size(Sx, 1), ind_elem)
   if row == col
     return DiffPrecResultNormal(Δ[1], sqrt(v))
   else
@@ -39,12 +39,12 @@ end
 
 
 
-function _computeVarStep1!(
-  ω, 
+function _compute_var_step1!(
+  ω,
   Sx::Symmetric,
   Sy::Symmetric,
-  X, 
-  Y, 
+  X,
+  Y,
   Δ::SparseIterate)
   nx = size(X, 1)
   ny = size(Y, 1)
@@ -53,7 +53,7 @@ function _computeVarStep1!(
   r = zeros(ny)
 
   # the entries (row, col) of the coordinates, computed once for the inner loops
-  E = _trilEntries(size(Sx, 1))
+  E = _tril_entries(size(Sx, 1))
   EΔ = [E[Δ.nzval2ind[inz]] for inz=1:nnz(Δ)]
 
   for ri=1:length(ω)
@@ -85,13 +85,13 @@ function _computeVarStep1!(
 
     σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
     σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t^2
-  
+
     ω[ri] = sqrt( σ1/nx + σ2/ny )
   end
 end
 
 """
-    reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ, method=CDSolver())
+    reduced_diff_estimation(H, b, Sx, Sy, X, Y, λ, method=CDSolver())
 
 First stage of [`ReducedNormal`](@ref): minimize `x'Hx/2 + b'x` plus a weighted
 ℓ1 penalty with level `λ`, where `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` and
@@ -100,7 +100,7 @@ coordinate descent with the options `method`. The weights are standard errors
 of the gradient estimated from `X` and `Y`, computed at zero and again at the
 first solution. Returns a `SparseIterate` of length `p(p+1)/2`.
 """
-function reducedDiffEstimation(
+function reduced_diff_estimation(
   H::Symmetric,
   b::Vector,
   Sx::Symmetric,
@@ -108,7 +108,7 @@ function reducedDiffEstimation(
   X, Y, λ, method::CDSolver=CDSolver())
   x = SparseIterate(size(H, 1))
   ω = zeros(size(H, 1))
-  _twoStage!(x, QuadraticFunction(H, b), λ, ω, (ω, x) -> _computeVarStep1!(ω, Sx, Sy, X, Y, x), method)
+  _two_stage!(x, QuadraticFunction(H, b), λ, ω, (ω, x) -> _compute_var_step1!(ω, Sx, Sy, X, Y, x), method)
 end
 
 
@@ -116,12 +116,12 @@ end
 
 
 
-function _computeVarStep2!(ω, 
-  indElem, 
+function _compute_var_step2!(ω,
+  ind_elem,
   Sx::Symmetric,
   Sy::Symmetric,
-  X, 
-  Y, 
+  X,
+  Y,
   Δ::SparseIterate)
 
   nx = size(X, 1)
@@ -131,7 +131,7 @@ function _computeVarStep2!(ω,
   r = zeros(ny)
 
   # the entries (row, col) of the coordinates, computed once for the inner loops
-  E = _trilEntries(size(Sx, 1))
+  E = _tril_entries(size(Sx, 1))
   EΔ = [E[Δ.nzval2ind[inz]] for inz=1:nnz(Δ)]
 
   for ri=1:length(ω)
@@ -139,7 +139,7 @@ function _computeVarStep2!(ω,
     fill!(r, 0.)
     e = E[ri]
 
-    δ = indElem == ri ? - 1. : 0.
+    δ = ind_elem == ri ? - 1. : 0.
 
     @inbounds for k=1:nx
       vx = view(X, k, :)
@@ -165,24 +165,24 @@ function _computeVarStep2!(ω,
 
     σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
     σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t^2
-  
+
     ω[ri] = sqrt( σ1/nx + σ2/ny )
   end
 end
 
 
 """
-    invHessianReduced(H, indRow, Sx, Sy, X, Y, λ, method=CDSolver())
+    inv_hessian_reduced(H, ind_row, Sx, Sy, X, Y, λ, method=CDSolver())
 
-Second stage of [`ReducedNormal`](@ref): estimate the row `indRow` of the
-inverse of `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` by minimizing `x'Hx/2 - x[indRow]`
-plus a weighted ℓ1 penalty with level `λ` that leaves `x[indRow]` unpenalized,
+Second stage of [`ReducedNormal`](@ref): estimate the row `ind_row` of the
+inverse of `H = Q (Sx ⊗ Sy + Sy ⊗ Sx) Q' / 2` by minimizing `x'Hx/2 - x[ind_row]`
+plus a weighted ℓ1 penalty with level `λ` that leaves `x[ind_row]` unpenalized,
 by ProximalSolvers' coordinate descent with the options `method`. The weights are
 standard errors of the gradient estimated from `X` and `Y`. Returns a
 `SparseIterate` of length `p(p+1)/2`.
 """
-function invHessianReduced(H::Symmetric,
-  indRow::Int,
+function inv_hessian_reduced(H::Symmetric,
+  ind_row::Int,
   Sx::Symmetric,
   Sy::Symmetric,
   X,
@@ -191,19 +191,19 @@ function invHessianReduced(H::Symmetric,
   method::CDSolver=CDSolver())
 
   b = zeros(size(H, 1))
-  b[indRow] = -1.
+  b[ind_row] = -1.
   x = SparseIterate(size(H, 1))
-  x[indRow] = 1. / H[indRow, indRow]
+  x[ind_row] = 1. / H[ind_row, ind_row]
   ω = zeros(size(H, 1))
-  weights!(ω, x) = (_computeVarStep2!(ω, indRow, Sx, Sy, X, Y, x); ω[indRow] = 0.; ω)
-  _twoStage!(x, QuadraticFunction(H, b), λ, ω, weights!, method)
+  weights!(ω, x) = (_compute_var_step2!(ω, ind_row, Sx, Sy, X, Y, x); ω[ind_row] = 0.; ω)
+  _two_stage!(x, QuadraticFunction(H, b), λ, ω, weights!, method)
 end
 
 ########################################################################
 
-# indElem --- index in a lower triangular part of the matrix
-#             can be obtained by tril_index        
-function estimate(::ReducedNormal, X, Y, indElem;
+# ind_elem --- index in a lower triangular part of the matrix
+#             can be obtained by tril_index
+function estimate(::ReducedNormal, X, Y, ind_elem;
   Sx::Union{Symmetric, Nothing}=nothing,
   Sy::Union{Symmetric, Nothing}=nothing,
   H::Union{Symmetric, Nothing}=nothing,
@@ -228,26 +228,26 @@ function estimate(::ReducedNormal, X, Y, indElem;
   b = svec(Sx) - svec(Sy)
 
   # first stage
-  λ = _penaltyLevel(p)
+  λ = _penalty_level(p)
   if Δ === nothing && suppΔ === nothing
-    Δ = reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ)
-    suppΔ = getReducedSupport(Δ)
+    Δ = reduced_diff_estimation(H, b, Sx, Sy, X, Y, λ)
+    suppΔ = get_reduced_support(Δ)
   end
   if suppΔ === nothing
-    suppΔ = getReducedSupport(Δ)
+    suppΔ = get_reduced_support(Δ)
   end
 
   # second stage
-  if ω === nothing && suppω === nothing    
-    ω = invHessianReduced(H, indElem, Sx, Sy, X, Y, λ)
-    suppω = getReducedSupport(ω)
+  if ω === nothing && suppω === nothing
+    ω = inv_hessian_reduced(H, ind_elem, Sx, Sy, X, Y, λ)
+    suppω = get_reduced_support(ω)
   end
   if suppω === nothing
-    suppω = getReducedSupport(ω)
+    suppω = get_reduced_support(ω)
   end
 
   # refit stage
-  indS = (1:size(H,1))[suppΔ .| suppω]
-  estimate(ReducedOracleNormal(), Sx, Sy, X, Y, indElem, indS), Δ, suppΔ, ω, suppω, indS
+  ind_s = (1:size(H,1))[suppΔ .| suppω]
+  estimate(ReducedOracleNormal(), Sx, Sy, X, Y, ind_elem, ind_s), Δ, suppΔ, ω, suppω, ind_s
 end
 

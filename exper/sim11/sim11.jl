@@ -55,7 +55,7 @@ Sx = Symmetric( X'X / n )
 Sy = Symmetric( Y'Y / n )
 
 
-@time boot_res, eS = bootstrap(X, Y)
+@time boot_res, e_s = bootstrap(X, Y)
 
 
-@save "$(dir)/res_$(ip)_$(rep).jld2" boot_res eS
+@save "$(dir)/res_$(ip)_$(rep).jld2" boot_res e_s
