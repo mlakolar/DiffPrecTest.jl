@@ -90,6 +90,24 @@ end
     @test [DiffPrecTest._get_elem_kron(A, B, ri, ci) for ri=1:6, ci=1:20] ≈ k
 end
 
+@testset "covariance difference variance" begin
+    Sx = [2.0 0.4 -0.2; 0.4 1.5 0.3; -0.2 0.3 1.0]
+    Sy = [1.2 -0.1 0.2; -0.1 1.8 0.4; 0.2 0.4 1.5]
+    nx, ny = 13, 29
+    p = size(Sx, 1)
+
+    # Gaussian sample-covariance identity: (I + K)(S ⊗ S)/(n - 1),
+    # where K maps vec(A) to vec(transpose(A)). Independent samples add.
+    independent = kron(Sx, Sx) / (nx - 1) + kron(Sy, Sy) / (ny - 1)
+    transpose_order = vec(permutedims(reshape(1:p^2, p, p)))
+    reference = independent + independent[transpose_order, :]
+    for indices in (collect(1:p^2), [9, 2, 5, 4, 1, 2], Int[])
+        actual = DiffPrecTest._var_sx_sy(Sx, nx, Sy, ny, indices)
+        @test size(actual) == (length(indices), length(indices))
+        @test actual ≈ reference[indices, indices]
+    end
+end
+
 @testset "normal quantile" begin
     @test DiffPrecTest._norm_quantile(0.5) == 0.
     @test DiffPrecTest._norm_quantile(0.975) ≈ 1.9599639845400576
