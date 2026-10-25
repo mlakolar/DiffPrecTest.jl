@@ -7,7 +7,7 @@
 # The loss tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[a, b] of a p × p matrix Θ, held as vec(Θ) in a
 # SparseIterate, as ProximalBase's KronQuadratic. Its minimizer is the row
 # (b - 1) p + a of the inverse of Σy ⊗ Σx.
-function _inverseKroneckerLoss(Σx::Symmetric, Σy::Symmetric, a::Int, b::Int)
+function _inverse_kronecker_loss(Σx::Symmetric, Σy::Symmetric, a::Int, b::Int)
   E = zeros(size(Σx))
   E[a, b] = -1.
   KronQuadratic(Σx, Σy, E)
@@ -16,12 +16,12 @@ end
 
 ############################################
 #
-#   asymmetric version of invHessian
+#   asymmetric version of inv_hessian
 #
 ############################################
 
 # A = Sx⋅Θ⋅Sy
-function _computeAsymVarElem(
+function _compute_asym_var_elem(
     q, r,
     A, a, b,
     SxΘ, ΘSy,
@@ -64,7 +64,7 @@ function _computeAsymVarElem(
 end
 
 # the weights of the penalty on vec(Θ); the entry (a, b) is not penalized
-function _computeAsymVar!(ω, Sx, Sy, a, b, X, Y, Θ)
+function _compute_asym_var!(ω, Sx, Sy, a, b, X, Y, Θ)
     nx, p = size(X)
     ny    = size(Y, 1)
 
@@ -77,8 +77,8 @@ function _computeAsymVar!(ω, Sx, Sy, a, b, X, Y, Θ)
 
     for col=1:p
         for row=1:p
-            linInd = (col-1)*p + row
-            ω[linInd] = sqrt(_computeAsymVarElem(q, r, A, a, b, SxΘ, ΘSy, X, Y, row, col))
+            lin_ind = (col-1)*p + row
+            ω[lin_ind] = sqrt(_compute_asym_var_elem(q, r, A, a, b, SxΘ, ΘSy, X, Y, row, col))
         end
     end
     ω[(b-1)*p + a] = 0.
@@ -88,7 +88,7 @@ end
 
 
 """
-    invAsymHessianEstimation(Sx, Sy, ri, ci, X, Y, λ, method=CDSolver())
+    inv_asym_hessian_estimation(Sx, Sy, ri, ci, X, Y, λ, method=CDSolver())
 
 Second stage of [`AsymmetricNormal`](@ref): estimate the row `(ci - 1) p + ri`
 of the inverse of `Σy ⊗ Σx` by minimizing the loss `tr(Σx⋅Θ⋅Σy⋅Θ')/2 - Θ[ri, ci]`
@@ -99,11 +99,11 @@ and `Y`, computed at the starting point, the indicator of the entry, and again
 at the first solution. Returns a `SparseIterate` holding `vec(Θ)`, of length
 `p²`.
 """
-function invAsymHessianEstimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, method::CDSolver=CDSolver())
+function inv_asym_hessian_estimation(Sx::Symmetric, Sy::Symmetric, ri, ci, X, Y, λ, method::CDSolver=CDSolver())
     p = size(X, 2)
     x = SparseIterate(p*p)
     x[(ci-1)*p + ri] = 1.
     ω = zeros(p*p)
-    _twoStage!(x, _inverseKroneckerLoss(Sx, Sy, ri, ci), λ, ω,
-      (ω, x) -> _computeAsymVar!(ω, Sx, Sy, ri, ci, X, Y, x), method)
+    _two_stage!(x, _inverse_kronecker_loss(Sx, Sy, ri, ci), λ, ω,
+      (ω, x) -> _compute_asym_var!(ω, Sx, Sy, ri, ci, X, Y, x), method)
 end

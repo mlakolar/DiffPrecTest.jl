@@ -67,7 +67,7 @@ function _compute(::OneSampleUstatistics{2}, h, X::AbstractMatrix)
   v = 0.
   @inbounds for i1=1:n
     for i2=i1+1:n
-      v += h( view(X, i1, :), 
+      v += h( view(X, i1, :),
               view(X, i2, :) )
     end
   end
@@ -135,7 +135,7 @@ function _variance(::TwoSampleUstatistics{1, 1}, h, X::AbstractMatrix, Y::Abstra
   nx = size(X, 1)
   ny = size(Y, 1)
 
-  q = zeros(nx)  
+  q = zeros(nx)
   @inbounds for k=1:nx
     vx = view(X, k, :)
     for j=1:ny
@@ -158,34 +158,34 @@ function _variance(::TwoSampleUstatistics{1, 1}, h, X::AbstractMatrix, Y::Abstra
   σ1 = sum(abs2, q) / (nx - 1) - nx / (nx - 1) * t^2
   σ2 = sum(abs2, r) / (ny - 1) - ny / (ny - 1) * t^2
 
-  return σ1/nx + σ2/ny  
+  return σ1/nx + σ2/ny
 end
 
 
 ######################################
 
-### examples 
+### examples
 
-function createVarianceStatistic()
-  @inline function h(x, y) 
-    (x - y)^2 / 2.    
+function create_variance_statistic()
+  @inline function h(x, y)
+    (x - y)^2 / 2.
   end
   OneSampleUstatistics{2}(h)
 end
 
-function createCovarianceStatistic(row::Int, col::Int)
-  @inline function h(X, Y) 
-      @inbounds (X[row] - Y[row]) * (X[col] - Y[col]) / 2.    
+function create_covariance_statistic(row::Int, col::Int)
+  @inline function h(X, Y)
+      @inbounds (X[row] - Y[row]) * (X[col] - Y[col]) / 2.
   end
   OneSampleUstatistics{2}(h)
 end
 
-function createSecondMomentStatistic()
+function create_second_moment_statistic()
   h(X) = X*X
   OneSampleUstatistics{1}(h)
 end
 
-function createSecondMomentStatistic(row::Int, col::Int)
+function create_second_moment_statistic(row::Int, col::Int)
   @inbounds h(X) = X[row] * X[col]
   OneSampleUstatistics{1}(h)
 end

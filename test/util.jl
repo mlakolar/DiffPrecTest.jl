@@ -48,7 +48,7 @@ end
 
         for ci=1:25
             for ri=1:25
-                v = DiffPrecTest._getElemSKron(S, view(X, i, :), ri, ci)
+                v = DiffPrecTest._get_elem_skron(S, view(X, i, :), ri, ci)
                 @test sKron[ri, ci] ≈ v
             end
         end
@@ -58,7 +58,7 @@ end
     sKron = ( kron(S, S2) + kron(S2, S) ) / 2.
     for ci=1:30
         for ri=1:30
-            v = DiffPrecTest._getElemSKron(S, S2, ri, ci)
+            v = DiffPrecTest._get_elem_skron(S, S2, ri, ci)
             @test sKron[ri, ci] ≈ v
         end
     end
@@ -75,8 +75,8 @@ end
 
         for ci=1:25
             for ri=1:25
-                v  = DiffPrecTest._getElemKron(S, view(X, i, :), ri, ci)
-                v1 = DiffPrecTest._getElemKron(view(X, i, :), S, ri, ci)
+                v  = DiffPrecTest._get_elem_kron(S, view(X, i, :), ri, ci)
+                v1 = DiffPrecTest._get_elem_kron(view(X, i, :), S, ri, ci)
                 @test k[ri, ci] ≈ v
                 @test k1[ri, ci] ≈ v1
             end
@@ -87,24 +87,24 @@ end
     A = randn(3, 4)
     B = randn(2, 5)
     k = kron(A, B)
-    @test [DiffPrecTest._getElemKron(A, B, ri, ci) for ri=1:6, ci=1:20] ≈ k
+    @test [DiffPrecTest._get_elem_kron(A, B, ri, ci) for ri=1:6, ci=1:20] ≈ k
 end
 
 @testset "normal quantile" begin
-    @test DiffPrecTest._normQuantile(0.5) == 0.
-    @test DiffPrecTest._normQuantile(0.975) ≈ 1.9599639845400576
-    @test DiffPrecTest._normQuantile(0.025) ≈ -1.9599639845400592
-    @test DiffPrecTest._normQuantile(1e-10) ≈ -6.3613409024040575
-    @test DiffPrecTest._penaltyLevel(10) ≈ 1.01 * DiffPrecTest._normQuantile(1. - 0.1 / 110)
+    @test DiffPrecTest._norm_quantile(0.5) == 0.
+    @test DiffPrecTest._norm_quantile(0.975) ≈ 1.9599639845400576
+    @test DiffPrecTest._norm_quantile(0.025) ≈ -1.9599639845400592
+    @test DiffPrecTest._norm_quantile(1e-10) ≈ -6.3613409024040575
+    @test DiffPrecTest._penalty_level(10) ≈ 1.01 * DiffPrecTest._norm_quantile(1. - 0.1 / 110)
 end
 
-@testset "getSupport" begin
+@testset "get_support" begin
     p = 4
     x = SymmetricSparseIterate(p)
     x[2, 1] = 0.5
     x[4, 3] = -0.5      # negative entries are in the support
     x[3, 3] = -1e-4     # below the threshold
-    S = DiffPrecTest.getSupport(x)
+    S = DiffPrecTest.get_support(x)
     T = falses(p, p)
     T[2, 1] = T[1, 2] = T[4, 3] = T[3, 4] = true
     @test S == T
@@ -113,7 +113,7 @@ end
     θ = SparseIterate(div(p * (p + 1), 2))
     θ[tril_index(p, 2, 1)] = 0.5
     θ[tril_index(p, 4, 3)] = -0.5
-    @test DiffPrecTest.getSupport(θ, p) == T
+    @test DiffPrecTest.get_support(θ, p) == T
 
     # p × p matrix stored by columns, not symmetrized
     θ = SparseIterate(p * p)
@@ -121,11 +121,11 @@ end
     θ[(3 - 1) * p + 4] = -0.5
     T = falses(p, p)
     T[2, 1] = T[4, 3] = true
-    @test DiffPrecTest.getSupport(θ, p) == T
+    @test DiffPrecTest.get_support(θ, p) == T
 
-    @test_throws DimensionMismatch DiffPrecTest.getSupport(SparseIterate(5), p)
+    @test_throws DimensionMismatch DiffPrecTest.get_support(SparseIterate(5), p)
 
-    @test DiffPrecTest.getReducedSupport(θ) == (abs.(Vector(θ)) .> 1e-3)
+    @test DiffPrecTest.get_reduced_support(θ) == (abs.(Vector(θ)) .> 1e-3)
 end
 
 @testset "linear support" begin
@@ -133,35 +133,35 @@ end
     S = falses(p, p)
     S[3, 1] = S[1, 3] = true
     S[2, 2] = true
-    supp = DiffPrecTest.getLinearSupport(2, 1, S)
+    supp = DiffPrecTest.get_linear_support(2, 1, S)
     @test supp[1:2] == [2, 5]      # (2, 1) and (1, 2) first
     @test sort(supp[3:end]) == [3, 6, 9]
 
-    supp = DiffPrecTest.getLinearSupport(2, 2, S, falses(p, p))
+    supp = DiffPrecTest.get_linear_support(2, 2, S, falses(p, p))
     @test supp[1] == 6
     @test sort(supp) == [3, 6, 9]
 
     # (row, col) in the support but not (col, row)
-    @test DiffPrecTest.makeFirst!([7, 2], p, 2, 1) == [2, 5, 7]
-    @test DiffPrecTest.makeFirst!([5, 7], p, 2, 1) == [2, 5, 7]
-    @test DiffPrecTest.makeFirst!([5, 7, 2], p, 2, 1) == [2, 5, 7]
+    @test DiffPrecTest.make_first!([7, 2], p, 2, 1) == [2, 5, 7]
+    @test DiffPrecTest.make_first!([5, 7], p, 2, 1) == [2, 5, 7]
+    @test DiffPrecTest.make_first!([5, 7, 2], p, 2, 1) == [2, 5, 7]
 
     # support given by indices into svec(Δ)
     ind = [tril_index(p, 3, 1), tril_index(p, 2, 2)]
-    s1 = DiffPrecTest._linearSupport(2, 1, ind, p)
-    s2 = DiffPrecTest.getLinearSupport(2, 1, S)
+    s1 = DiffPrecTest._linear_support(2, 1, ind, p)
+    s2 = DiffPrecTest.get_linear_support(2, 1, S)
     @test s1[1:2] == s2[1:2]
     @test sort(s1) == sort(s2)
-    @test DiffPrecTest._linearSupport(2, 1, S, p) == DiffPrecTest.getLinearSupport(2, 1, S)
+    @test DiffPrecTest._linear_support(2, 1, S, p) == DiffPrecTest.get_linear_support(2, 1, S)
 end
 
-@testset "computeSimulationResult" begin
-    z = DiffPrecTest._normQuantile(0.975)
+@testset "compute_simulation_result" begin
+    z = DiffPrecTest._norm_quantile(0.975)
     res = [DiffPrecResultNormal(0.1, 0.05), DiffPrecResultNormal(0.3, 0.05)]
-    sr = computeSimulationResult(res, 0.1)
+    sr = compute_simulation_result(res, 0.1)
     @test sr.bias ≈ 0.1
     @test sr.coverage == 0.5
-    @test sr.lenCoverage ≈ 2 * z * 0.05
+    @test sr.len_coverage ≈ 2 * z * 0.05
     @test sr.p_mean ≈ 0.2
     @test sr.p_var ≈ 0.02
 
@@ -170,9 +170,9 @@ end
     shuffle!(b1)
     res = [DiffPrecResultBoot(0.1, b1), DiffPrecResultBoot(0.4, b2)]
     b1copy = copy(b1)
-    sr = computeSimulationResult(res, 0.1)
+    sr = compute_simulation_result(res, 0.1)
     @test sr.coverage == 0.5
-    @test sr.lenCoverage ≈ 0.2 * 0.95
+    @test sr.len_coverage ≈ 0.2 * 0.95
     @test sr.bias ≈ 0.15
     @test b1 == b1copy    # replicates are not reordered
 end

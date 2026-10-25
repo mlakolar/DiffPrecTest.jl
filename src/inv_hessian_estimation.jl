@@ -1,6 +1,6 @@
 
-include("invHessianEstimationASym.jl")
-include("invHessianEstimationSymReduced.jl")
+include("inv_hessian_estimation_asym.jl")
+include("inv_hessian_estimation_sym_reduced.jl")
 
 
 ########################

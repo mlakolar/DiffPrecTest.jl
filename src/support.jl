@@ -5,7 +5,7 @@ abstract type DiffPrecSupport end
 
 Estimate the support of `Δ` by thresholding each entry at `τ` times its
 standard error from the normal approximation ([`SymmetricOracleNormal`](@ref)).
-See [`supportEstimate`](@ref).
+See [`support_estimate`](@ref).
 """
 struct ANTSupport <: DiffPrecSupport end
 
@@ -14,7 +14,7 @@ struct ANTSupport <: DiffPrecSupport end
 
 Estimate the support of `Δ` by thresholding each entry at `τ` times its
 bootstrap standard error ([`SymmetricOracleBoot`](@ref)). See
-[`supportEstimate`](@ref).
+[`support_estimate`](@ref).
 """
 struct BootStdSupport <: DiffPrecSupport end
 
@@ -30,7 +30,7 @@ struct BootMaxSupport <: DiffPrecSupport end   # not implemented yet
 
 Estimate `Δ` along a path of penalty parameters with the ℓ1 penalized direct
 difference (D-trace) estimator and choose the penalty on validation data. See
-[`supportEstimate`](@ref).
+[`support_estimate`](@ref).
 """
 struct DTraceValidationSupport <: DiffPrecSupport end
 
@@ -44,41 +44,41 @@ struct DTraceValidationSupport <: DiffPrecSupport end
 # For each entry of the lower triangle of Δ, in the order of tril_index,
 # the indices into svec(Δ) of the union of the supports of the first stage estimate
 # of Δ and of the second stage estimate of the row of the inverse Hessian.
-function __initSupport(
+function __init_support(
     Sx::Symmetric, Sy::Symmetric, X, Y)
 
     p = size(X, 2)
     np = div((p + 1)*p, 2)
 
-    estimSupp = Vector{Vector{Int64}}(undef, np)
+    estim_supp = Vector{Vector{Int64}}(undef, np)
 
     # first stage
-    λ = _penaltyLevel(p)
+    λ = _penalty_level(p)
     H = Symmetric( skron(Sx, Sy) )
     b = svec(Sx) - svec(Sy)
-    x1 = reducedDiffEstimation(H, b, Sx, Sy, X, Y, λ)
-    S1 = getReducedSupport(x1)
+    x1 = reduced_diff_estimation(H, b, Sx, Sy, X, Y, λ)
+    S1 = get_reduced_support(x1)
 
     # second stage
     ind = 0
     for ci=1:p
       for ri=ci:p
-        indElem = tril_index(p, ri, ci)
-        x2 = invHessianReduced(H, indElem, Sx, Sy, X, Y, λ)
-        S2 = getReducedSupport(x2)
+        ind_elem = tril_index(p, ri, ci)
+        x2 = inv_hessian_reduced(H, ind_elem, Sx, Sy, X, Y, λ)
+        S2 = get_reduced_support(x2)
         ind = ind + 1
-        estimSupp[ind] = (1:np)[S1 .| S2]
+        estim_supp[ind] = (1:np)[S1 .| S2]
       end
     end
 
-    estimSupp
+    estim_supp
 end
 
 # linear indices into a p × p matrix of a support given as a symmetric p × p
 # Bool matrix, or as indices into svec(Δ)
-_linearSupport(row, col, S::AbstractMatrix{Bool}, p) = getLinearSupport(row, col, S)
+_linear_support(row, col, S::AbstractMatrix{Bool}, p) = get_linear_support(row, col, S)
 
-function _linearSupport(row, col, S::AbstractVector{<:Integer}, p)
+function _linear_support(row, col, S::AbstractVector{<:Integer}, p)
     supp = Vector{Int64}()
     for k in S
         r, c = tril_cartesian(p, k)
@@ -87,7 +87,7 @@ function _linearSupport(row, col, S::AbstractVector{<:Integer}, p)
             push!(supp, (r-1)*p + c)
         end
     end
-    makeFirst!(supp, p, row, col)
+    make_first!(supp, p, row, col)
 end
 
 function __threshold(Δpoint::Vector{DiffPrecResultNormal}, p::Int, τ0::Float64)
@@ -129,124 +129,130 @@ function __threshold(Δpoint::Vector{DiffPrecResultBoot}, p::Int, τ0::Float64)
 end
 
 
-function __getΔ(::ANTSupport, X, Y; estimSupport::Union{AbstractVector,Nothing}=nothing)
+function _get_delta(::ANTSupport, X, Y; estim_support=nothing, estimSupport=nothing)
+  estim_support = _deprecated_keyword(estim_support, estimSupport, :estim_support, :estimSupport, nothing)
     nx, p = size(X)
     ny    = size(Y, 1)
 
     Sx = Symmetric( cov(X) )
     Sy = Symmetric( cov(Y) )
 
-    eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
+    e_s = estim_support === nothing ? __init_support(Sx, Sy, X, Y) : estim_support
     Δpoint = Array{DiffPrecResultNormal}(undef, div((p+1)*p, 2))
 
     it = 0
     for col=1:p
         for row=col:p
             it = it + 1
-            indS = _linearSupport(row, col, eS[it], p)
+            ind_s = _linear_support(row, col, e_s[it], p)
 
-            Δpoint[it] = estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS)
+            Δpoint[it] = estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, ind_s)
         end
     end
 
-    Δpoint, eS
+    Δpoint, e_s
 end
 
 
 """
-    supportEstimate(method, X, Y, τ; estimSupport=nothing)
+    support_estimate(method, X, Y, τ; estim_support=nothing)
 
 Estimate the support of `Δ = Ωx - Ωy` with `method` one of
 [`ANTSupport`](@ref) or [`BootStdSupport`](@ref): every entry in the lower
 triangle is refitted and kept when it exceeds `τ` times its standard error.
-Returns `(Δsupp, Δpoint, eS)`: the thresholded estimate as a sparse `p × p`
+Returns `(Δsupp, Δpoint, e_s)`: the thresholded estimate as a sparse `p × p`
 matrix (a vector of them when `τ` is a vector of thresholds), the refitted
 entries in the order of `ProximalBase.tril_index`, and the supports
 used for the refits.
 
-`estimSupport` gives the support used to refit each entry, as computed by the
+`estim_support` gives the support used to refit each entry, as computed by the
 first and second stage estimators unless given: a vector with one element per
 entry of the lower triangle, either a vector of indices into `svec(Δ)` or a
 symmetric `p × p` Bool matrix.
 
-    supportEstimate(DTraceValidationSupport(), Sx, Sy, SxValid, SyValid, Λarr, method=CDSolver())
+    support_estimate(DTraceValidationSupport(), Sx, Sy, SxValid, SyValid, Λarr, method=CDSolver())
 
 Compute the ℓ1 penalized direct difference estimator from the covariances `Sx`,
 `Sy` for each penalty parameter in `Λarr` (in decreasing order) and evaluate the
 loss `Sx⋅Δ⋅Sy - Sy + Sx` on the validation covariances `SxValid`, `SyValid`.
-Returns `(eΔarr, i2, iInf, loss2arr, lossInfarr)`: the estimates as sparse
+Returns `(eΔarr, i2, i_inf, loss2arr, loss_infarr)`: the estimates as sparse
 matrices, the indices of the penalty parameters that minimize the Frobenius and
 the maximum norm of the validation loss, and the two losses.
 """
-function supportEstimate(::ANTSupport, X, Y, τ0::Float64; estimSupport::Union{AbstractVector,Nothing}=nothing)
+function support_estimate(::ANTSupport, X, Y, τ0::Float64; estim_support=nothing, estimSupport=nothing)
+  estim_support = _deprecated_keyword(estim_support, estimSupport, :estim_support, :estimSupport, nothing)
     p = size(X, 2)
 
-    Δpoint, eS = __getΔ(ANTSupport(), X, Y; estimSupport=estimSupport)
+    Δpoint, e_s = _get_delta(ANTSupport(), X, Y; estim_support=estim_support)
     Δsupp = __threshold(Δpoint, p, τ0)
 
-    Δsupp, Δpoint, eS
+    Δsupp, Δpoint, e_s
 end
 
 
-function supportEstimate(::ANTSupport, X, Y, τArr::Vector{Float64}; estimSupport::Union{AbstractVector,Nothing}=nothing)
+function support_estimate(::ANTSupport, X, Y, τArr::Vector{Float64}; estim_support=nothing, estimSupport=nothing)
+  estim_support = _deprecated_keyword(estim_support, estimSupport, :estim_support, :estimSupport, nothing)
     p = size(X, 2)
 
-    Δpoint, eS = __getΔ(ANTSupport(), X, Y; estimSupport=estimSupport)
+    Δpoint, e_s = _get_delta(ANTSupport(), X, Y; estim_support=estim_support)
 
     Δsupp = Array{SparseMatrixCSC{Float64,Int64}}(undef, length(τArr))
     for i=1:length(τArr)
         Δsupp[i] = __threshold(Δpoint, p, τArr[i])
     end
 
-    Δsupp, Δpoint, eS
+    Δsupp, Δpoint, e_s
 end
 
 
-function __getΔ(::BootStdSupport, X, Y; estimSupport::Union{AbstractVector,Nothing}=nothing)
+function _get_delta(::BootStdSupport, X, Y; estim_support=nothing, estimSupport=nothing)
+  estim_support = _deprecated_keyword(estim_support, estimSupport, :estim_support, :estimSupport, nothing)
     nx, p = size(X)
     ny    = size(Y, 1)
 
     Sx = Symmetric( cov(X) )
     Sy = Symmetric( cov(Y) )
 
-    eS = estimSupport === nothing ? __initSupport(Sx, Sy, X, Y) : estimSupport
+    e_s = estim_support === nothing ? __init_support(Sx, Sy, X, Y) : estim_support
     Δpoint = Array{DiffPrecResultBoot}(undef, div((p+1)*p, 2))
 
     it = 0
     for col=1:p
         for row=col:p
             it = it + 1
-            indS = _linearSupport(row, col, eS[it], p)
+            ind_s = _linear_support(row, col, e_s[it], p)
 
-            Δpoint[it] = estimate(SymmetricOracleBoot(), Sx, Sy, X, Y, row, col, indS)
+            Δpoint[it] = estimate(SymmetricOracleBoot(), Sx, Sy, X, Y, row, col, ind_s)
         end
     end
 
-    Δpoint, eS
+    Δpoint, e_s
 end
 
 
-function supportEstimate(::BootStdSupport, X, Y, τ0::Float64; estimSupport::Union{AbstractVector,Nothing}=nothing)
+function support_estimate(::BootStdSupport, X, Y, τ0::Float64; estim_support=nothing, estimSupport=nothing)
+  estim_support = _deprecated_keyword(estim_support, estimSupport, :estim_support, :estimSupport, nothing)
     p = size(X, 2)
 
-    Δpoint, eS = __getΔ(BootStdSupport(), X, Y; estimSupport=estimSupport)
+    Δpoint, e_s = _get_delta(BootStdSupport(), X, Y; estim_support=estim_support)
     Δsupp = __threshold(Δpoint, p, τ0)
 
-    Δsupp, Δpoint, eS
+    Δsupp, Δpoint, e_s
 end
 
 
-function supportEstimate(::BootStdSupport, X, Y, τArr::Vector{Float64}; estimSupport::Union{AbstractVector,Nothing}=nothing)
+function support_estimate(::BootStdSupport, X, Y, τArr::Vector{Float64}; estim_support=nothing, estimSupport=nothing)
+  estim_support = _deprecated_keyword(estim_support, estimSupport, :estim_support, :estimSupport, nothing)
     p = size(X, 2)
 
-    Δpoint, eS = __getΔ(BootStdSupport(), X, Y; estimSupport=estimSupport)
+    Δpoint, e_s = _get_delta(BootStdSupport(), X, Y; estim_support=estim_support)
 
     Δsupp = Array{SparseMatrixCSC{Float64,Int64}}(undef, length(τArr))
     for i=1:length(τArr)
         Δsupp[i] = __threshold(Δpoint, p, τArr[i])
     end
 
-    Δsupp, Δpoint, eS
+    Δsupp, Δpoint, e_s
 end
 
 ####################################
@@ -256,7 +262,7 @@ end
 ####################################
 
 # Λarr should be in descending order
-function supportEstimate(::DTraceValidationSupport,
+function support_estimate(::DTraceValidationSupport,
     Sx::Symmetric, Sy::Symmetric,
     SxValid::Symmetric, SyValid::Symmetric,
     Λarr::Vector{Float64},
@@ -264,21 +270,21 @@ function supportEstimate(::DTraceValidationSupport,
 
     numΛ = length(Λarr)
     loss2arr = Vector{Float64}(undef, numΛ)
-    lossInfarr = Vector{Float64}(undef, numΛ)
+    loss_infarr = Vector{Float64}(undef, numΛ)
 
     # each λ warm started from the solution at the previous one
     function validate(i, λ, x, m)
-        loss2arr[i] = CovarianceSelection.diffLoss(SxValid, x, SyValid, 2)
-        lossInfarr[i] = CovarianceSelection.diffLoss(SxValid, x, SyValid, Inf)
+        loss2arr[i] = CovarianceSelection.diff_loss(SxValid, x, SyValid, 2)
+        loss_infarr[i] = CovarianceSelection.diff_loss(SxValid, x, SyValid, Inf)
         false
     end
-    path = solve_path(directDifferenceLoss(Sx, Sy), NormL1(1.0), Λarr, method;
+    path = solve_path(direct_difference_loss(Sx, Sy), NormL1(1.0), Λarr, method;
                       x=SymmetricSparseIterate(size(Sx, 1)), screening=false, callback=validate)
     eΔarr = path.solutions
 
     # find min loss
     i2 = argmin(loss2arr)
-    iInf = argmin(lossInfarr)
+    i_inf = argmin(loss_infarr)
 
-    eΔarr, i2, iInf, loss2arr, lossInfarr
+    eΔarr, i2, i_inf, loss2arr, loss_infarr
 end

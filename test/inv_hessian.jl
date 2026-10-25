@@ -8,7 +8,7 @@ using Random, LinearAlgebra, SparseArrays, Statistics
 
 Random.seed!(4)
 
-function genData(p; n = 1000)
+function gen_data(p; n = 1000)
   Sigmay = [0.7^abs(i-j) for i=1:p, j=1:p]
   X = randn(n,p)
   Y = randn(n,p) * sqrt(Sigmay)
@@ -20,7 +20,7 @@ const tight = CDSolver(; maxpasses=5000, tol=1e-12)
 @testset "invert Kroneker" begin
   for rep=1:20
     p = 20
-    X, Y = genData(p)
+    X, Y = gen_data(p)
     hSx, hSy = cov(X), cov(Y)
     A = kron(hSy, hSx)
 
@@ -33,7 +33,7 @@ const tight = CDSolver(; maxpasses=5000, tol=1e-12)
       x = SparseIterate(p*p)
       x1 = SparseIterate(p*p)
 
-      f = DiffPrecTest._inverseKroneckerLoss(Symmetric(hSx), Symmetric(hSy), ri, ci)
+      f = DiffPrecTest._inverse_kronecker_loss(Symmetric(hSx), Symmetric(hSy), ri, ci)
       b = zeros(Float64, p*p)
       b[(ci-1)*p+ri] = -1.
 
@@ -49,21 +49,21 @@ end
 @testset "invert reduced SymKroneker" begin
   for rep=1:20
     p = 10
-    X, Y = genData(p)
+    X, Y = gen_data(p)
     hSx, hSy = Symmetric(cov(X)), Symmetric(cov(Y))
     H = DiffPrecTest.skron(hSx, hSy)
     m = size(H, 1)
 
     λ = 0.05 + 0.25 * rand()
     # unit weights on svec(Θ) are weights 1/√2 on each off-diagonal entry of Θ
-    W = DiffPrecTest._symWeights!(zeros(p, p), ones(m), p)
+    W = DiffPrecTest._sym_weights!(zeros(p, p), ones(m), p)
 
     for (ri, ci) in [(1,1), (3,1), (5,4)]
       ind = tril_index(p, ri, ci)
       x = SymmetricSparseIterate(p)
       x1 = SparseIterate(m)
 
-      f = DiffPrecTest._inverseSymKroneckerLoss(hSx, hSy, ind)
+      f = DiffPrecTest._inverse_sym_kronecker_loss(hSx, hSy, ind)
       b = zeros(m)
       b[ind] = -1.
       f1 = QuadraticFunction(H, b)
@@ -78,7 +78,7 @@ end
 
 @testset "gradient" begin
   p = 5
-  X, Y = genData(p)
+  X, Y = gen_data(p)
   hSx, hSy = Symmetric(cov(X)), Symmetric(cov(Y))
 
   # reduced symmetric Hessian: the gradient in svec(Θ) is Hθ - e_ind, which is
@@ -93,7 +93,7 @@ end
     x[r, c] = r == c ? θ[k] : θ[k] / sqrt(2)
   end
   @test Vector(DiffPrecTest._svec(x)) ≈ Vector(θ)
-  G = gradient(DiffPrecTest._inverseSymKroneckerLoss(hSx, hSy, ind), x)
+  G = gradient(DiffPrecTest._inverse_sym_kronecker_loss(hSx, hSy, ind), x)
   e = zeros(m)
   e[ind] = 1.
   @test [r == c ? G[r, c] : sqrt(2) * G[r, c] for c=1:p for r=c:p] ≈ H * Vector(θ) - e
@@ -102,7 +102,7 @@ end
   A = kron(hSy, hSx)
   x = SparseIterate(p*p)
   x .= sprandn(p*p, 0.5)
-  f = DiffPrecTest._inverseKroneckerLoss(hSx, hSy, 3, 2)
+  f = DiffPrecTest._inverse_kronecker_loss(hSx, hSy, 3, 2)
   e = zeros(p*p)
   e[(2-1)*p + 3] = 1.
   @test vec(gradient(f, x)) ≈ A * Vector(x) - e
@@ -112,7 +112,7 @@ end
   # with a negligible penalty the second stage estimates are the rows of the
   # inverse of the sample Hessian
   p = 5
-  X, Y = genData(p; n = 500)
+  X, Y = gen_data(p; n = 500)
   n = size(X, 1)
   Sx = Symmetric( X'X / n )
   Sy = Symmetric( Y'Y / n )
@@ -120,13 +120,13 @@ end
   H = DiffPrecTest.skron(Sx, Sy)
   for (ri, ci) in [(1,1), (4,2)]
     ind = tril_index(p, ri, ci)
-    ω = invQSymHessian(Sx, Sy, ind, X, Y, 1e-10, tight)
+    ω = inv_q_sym_hessian(Sx, Sy, ind, X, Y, 1e-10, tight)
     @test Vector(ω) ≈ inv(H)[:, ind] atol=1e-6
   end
 
   A = kron(Sy, Sx)
   for (ri, ci) in [(1,1), (4,2), (2,4)]
-    ω = invAsymHessianEstimation(Sx, Sy, ri, ci, X, Y, 1e-10, tight)
+    ω = inv_asym_hessian_estimation(Sx, Sy, ri, ci, X, Y, 1e-10, tight)
     @test Vector(ω) ≈ inv(A)[:, (ci-1)*p + ri] atol=1e-6
   end
 end
@@ -136,11 +136,11 @@ end
   # Σy by a divides the solution by a² and takes the same number of passes
   # (powers of 2 keep the scaling exact)
   p = 5
-  X, Y = genData(p)
+  X, Y = gen_data(p)
   hSx, hSy = Symmetric(cov(X)), Symmetric(cov(Y))
   ind = tril_index(p, 3, 2)
-  for (loss, x0) in (((Sx, Sy) -> DiffPrecTest._inverseKroneckerLoss(Sx, Sy, 3, 2), () -> SparseIterate(p*p)),
-                     ((Sx, Sy) -> DiffPrecTest._inverseSymKroneckerLoss(Sx, Sy, ind), () -> SymmetricSparseIterate(p)))
+  for (loss, x0) in (((Sx, Sy) -> DiffPrecTest._inverse_kronecker_loss(Sx, Sy, 3, 2), () -> SparseIterate(p*p)),
+                     ((Sx, Sy) -> DiffPrecTest._inverse_sym_kronecker_loss(Sx, Sy, ind), () -> SymmetricSparseIterate(p)))
     passes, sols = Int[], Matrix{Float64}[]
     for a in (0.25, 1.0, 4.0)
       x = x0()

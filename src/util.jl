@@ -1,8 +1,8 @@
 # quantile function of the standard normal distribution
-_normQuantile(α::Real) = -sqrt(2.) * erfcinv(2. * α)
+_norm_quantile(α::Real) = -sqrt(2.) * erfcinv(2. * α)
 
 # penalty level used by the first and second stage estimators with p variables
-_penaltyLevel(p::Integer) = 1.01 * _normQuantile(1. - 0.1 / (p * (p + 1)))
+_penalty_level(p::Integer) = 1.01 * _norm_quantile(1. - 0.1 / (p * (p + 1)))
 
 
 # compute kron(A, B)[Irow, Icol]
@@ -61,7 +61,7 @@ skron_sub(A, B, Irow, Icol) = skron_sub!(Matrix{Float64}(undef, length(Irow), le
 
 
 
-function _getElemKron(A::AbstractMatrix, B::AbstractMatrix, row, col)
+function _get_elem_kron(A::AbstractMatrix, B::AbstractMatrix, row, col)
     p, q = size(B)
 
     ac = div(col-1, q) + 1
@@ -72,7 +72,7 @@ function _getElemKron(A::AbstractMatrix, B::AbstractMatrix, row, col)
     @inbounds A[ar, ac] * B[br, bc]
 end
 
-function _getElemKron(S::AbstractMatrix, xi::AbstractVector, row, col)
+function _get_elem_kron(S::AbstractMatrix, xi::AbstractVector, row, col)
     p = size(S, 1)
 
     ac = div(col-1, p) + 1
@@ -83,7 +83,7 @@ function _getElemKron(S::AbstractMatrix, xi::AbstractVector, row, col)
     @inbounds S[ar, ac] * xi[br] * xi[bc]
 end
 
-function _getElemKron(xi::AbstractVector, S::AbstractMatrix, row, col)
+function _get_elem_kron(xi::AbstractVector, S::AbstractMatrix, row, col)
     p = size(S, 1)
 
     ac = div(col-1, p) + 1
@@ -94,7 +94,7 @@ function _getElemKron(xi::AbstractVector, S::AbstractMatrix, row, col)
     @inbounds S[br, bc] * xi[ar] * xi[ac]
 end
 
-function _getElemSKron(S::AbstractMatrix, xi::AbstractVector, row, col)
+function _get_elem_skron(S::AbstractMatrix, xi::AbstractVector, row, col)
     p = size(S, 1)
 
     ac = div(col-1, p) + 1
@@ -105,35 +105,35 @@ function _getElemSKron(S::AbstractMatrix, xi::AbstractVector, row, col)
     @inbounds ( S[ar, ac] * xi[br] * xi[bc] + S[br, bc] * xi[ar] * xi[ac] ) / 2.
 end
 
-_getElemSKron(A::AbstractMatrix, B::AbstractMatrix, row, col) =
-    ( _getElemKron(A, B, row, col) + _getElemKron(B, A, row, col) ) / 2.
+_get_elem_skron(A::AbstractMatrix, B::AbstractMatrix, row, col) =
+    ( _get_elem_kron(A, B, row, col) + _get_elem_kron(B, A, row, col) ) / 2.
 
 
-# computes variance of Var(Sx - Sy)[indS, indS]
-# where indS is a list of elements in [1:p, 1:p]
-function _varSxSy(Sx, nx, Sy, ny, indS)
+# computes variance of Var(Sx - Sy)[ind_s, ind_s]
+# where ind_s is a list of elements in [1:p, 1:p]
+function _var_sx_sy(Sx, nx, Sy, ny, ind_s)
 
-    varS = zeros(length(indS), length(indS))   # var(Sx) + var(Sy)
+    var_s = zeros(length(ind_s), length(ind_s))   # var(Sx) + var(Sy)
 
     I = CartesianIndices(Sx)
-    for ia = 1:length(indS)
-      a = indS[ia]
-      for ib = 1:length(indS)
-        b = indS[ib]
+    for ia = 1:length(ind_s)
+      a = ind_s[ia]
+      for ib = 1:length(ind_s)
+        b = ind_s[ib]
 
         i, j = Tuple( I[a] )
         k, l = Tuple( I[b] )
 
-        varS[ia, ib] = (Sx[i, k] * Sx[j, l] + Sx[i, l] * Sx[j, k]) / (nx - 1) + (Sy[i, k] * Sy[j, l] + Sy[i, l] * Sy[j, k]) / (ny - 1)
+        var_s[ia, ib] = (Sx[i, k] * Sx[j, l] + Sx[i, l] * Sx[j, k]) / (nx - 1) + (Sy[i, k] * Sy[j, l] + Sy[i, l] * Sy[j, k]) / (ny - 1)
       end
     end
 
-    varS
+    var_s
 end
 
 
 # entries of a symmetric x larger than τ in absolute value, as a p × p BitMatrix
-function getSupport(x::SymmetricSparseIterate, τ::Float64=1e-3)
+function get_support(x::SymmetricSparseIterate, τ::Float64=1e-3)
   p = size(x, 1)
 
   S = falses(p, p)
@@ -150,7 +150,7 @@ end
 
 # x holds either the lower triangle of a symmetric p × p matrix (length p(p+1)/2),
 # or a p × p matrix stored by columns (length p²)
-function getSupport(x::SparseIterate, p::Int, τ::Float64=1e-3)
+function get_support(x::SparseIterate, p::Int, τ::Float64=1e-3)
   S = falses(p, p)
   if length(x) == p * p
       for ind=1:p*p
@@ -175,9 +175,9 @@ function getSupport(x::SparseIterate, p::Int, τ::Float64=1e-3)
   S
 end
 
-getReducedSupport(x::SparseIterate, τ::Float64=1e-3) = abs.(x) .> τ
+get_reduced_support(x::SparseIterate, τ::Float64=1e-3) = abs.(x) .> τ
 
-function getLinearSupport(row::Int, col::Int, S1::AbstractMatrix{Bool}, S2::AbstractMatrix{Bool})
+function get_linear_support(row::Int, col::Int, S1::AbstractMatrix{Bool}, S2::AbstractMatrix{Bool})
   p = size(S1, 1)
 
   supp = Vector{Int64}()
@@ -188,10 +188,10 @@ function getLinearSupport(row::Int, col::Int, S1::AbstractMatrix{Bool}, S2::Abst
       end
     end
   end
-  makeFirst!(supp, p, row, col)
+  make_first!(supp, p, row, col)
 end
 
-function getLinearSupport(row::Int, col::Int, S::AbstractMatrix{Bool})
+function get_linear_support(row::Int, col::Int, S::AbstractMatrix{Bool})
   p = size(S, 1)
 
   supp = Vector{Int64}()
@@ -202,11 +202,11 @@ function getLinearSupport(row::Int, col::Int, S::AbstractMatrix{Bool})
       end
     end
   end
-  makeFirst!(supp, p, row, col)
+  make_first!(supp, p, row, col)
 end
 
 # moves (row, col) to the front of supp and (col, row) to the second position
-function makeFirst!(supp::Vector{Int64}, p, row, col)
+function make_first!(supp::Vector{Int64}, p, row, col)
   ind = (col - 1) * p + row
   pos = findfirst(isequal(ind), supp)
   if  pos === nothing
@@ -228,10 +228,10 @@ function makeFirst!(supp::Vector{Int64}, p, row, col)
 end
 
 
-function makeFirst!(supp::Vector{Int64}, indElem)  
-  pos = findfirst(isequal(indElem), supp)
+function make_first!(supp::Vector{Int64}, ind_elem)
+  pos = findfirst(isequal(ind_elem), supp)
   if  pos === nothing
-      pushfirst!(supp, indElem)
+      pushfirst!(supp, ind_elem)
   else
       supp[pos], supp[1] = supp[1], supp[pos]
   end
@@ -240,45 +240,45 @@ end
 
 
 """
-    computeSimulationResult(res, trueParam, α=0.05)
+    compute_simulation_result(res, true_param, α=0.05)
 
-Summarize the estimates `res` of one entry of `Δ` with true value `trueParam`
+Summarize the estimates `res` of one entry of `Δ` with true value `true_param`
 over repetitions of a simulation as a [`SimulationResult`](@ref). The confidence
 intervals at level `1 - α` are `p ± z₁₋α/₂ std` for a vector of
 [`DiffPrecResultNormal`](@ref), and the `α/2` and `1 - α/2` quantiles of the
 bootstrap replicates for a vector of [`DiffPrecResultBoot`](@ref).
 """
-function computeSimulationResult(res::Vector{DiffPrecResultNormal}, trueParam::Float64, α::Float64=0.05)
+function compute_simulation_result(res::Vector{DiffPrecResultNormal}, true_param::Float64, α::Float64=0.05)
   Eestim = 0.
   bias = 0.
   coverage = 0
-  lenCoverage = 0.
+  len_coverage = 0.
 
   num_rep = length(res)
-  zα = _normQuantile(1. - α / 2.)
+  zα = _norm_quantile(1. - α / 2.)
 
   for rep=1:num_rep
-    if res[rep].p - zα * res[rep].std < trueParam && res[rep].p + zα * res[rep].std > trueParam
+    if res[rep].p - zα * res[rep].std < true_param && res[rep].p + zα * res[rep].std > true_param
       coverage += 1
     end
-    lenCoverage += 2. * zα * res[rep].std
+    len_coverage += 2. * zα * res[rep].std
     Eestim += res[rep].p
   end
 
-  bias = Eestim / num_rep - trueParam
+  bias = Eestim / num_rep - true_param
 
   ep = [res[rep].p for rep=1:num_rep]
   mean_p = mean(ep)
   var_p = var(ep)
 
-  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep, mean_p, var_p)
+  SimulationResult(bias, coverage / num_rep, len_coverage / num_rep, mean_p, var_p)
 end
 
-function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Float64, α::Float64=0.05)
+function compute_simulation_result(res::Vector{DiffPrecResultBoot}, true_param::Float64, α::Float64=0.05)
   Eestim = 0.
   bias = 0.
   coverage = 0
-  lenCoverage = 0.
+  len_coverage = 0.
 
   num_rep = length(res)
   z1 = α / 2.
@@ -286,19 +286,19 @@ function computeSimulationResult(res::Vector{DiffPrecResultBoot}, trueParam::Flo
 
   for rep=1:num_rep
     lb, ub = quantile(res[rep].boot_p, [z1, z2])
-    if lb < trueParam && ub > trueParam
+    if lb < true_param && ub > true_param
       coverage += 1
     end
-    lenCoverage += (ub - lb)
+    len_coverage += (ub - lb)
     Eestim += res[rep].p
   end
 
-  bias = Eestim / num_rep - trueParam
+  bias = Eestim / num_rep - true_param
 
   ep = [res[rep].p for rep=1:num_rep]
   mean_p = mean(ep)
   var_p = var(ep)
 
 
-  SimulationResult(bias, coverage / num_rep, lenCoverage / num_rep, mean_p, var_p)
+  SimulationResult(bias, coverage / num_rep, len_coverage / num_rep, mean_p, var_p)
 end

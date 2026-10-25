@@ -18,8 +18,8 @@ independent Gaussian samples.
     `ReducedOracleNormal`, and with bootstrap standard errors
     `SymmetricOracleBoot`, `AsymmetricOracleBoot`
 * Simultaneous confidence intervals for all entries by the bootstrap:
-  `bootstrap`, `simulCI`, `simulCIstudentized`
-* Support recovery: `supportEstimate` with `ANTSupport`, `BootStdSupport` or
+  `bootstrap`, `simul_ci`, `simul_ci_studentized`
+* Support recovery: `support_estimate` with `ANTSupport`, `BootStdSupport` or
   `DTraceValidationSupport`
 
 DiffPrecTest is one of five Julia packages for high-dimensional statistics,
@@ -27,7 +27,7 @@ three for estimation and inference and two for the optimization beneath them:
 
 | Package | |
 |---|---|
-| [CoordinateDescent.jl](https://github.com/mlakolar/CoordinateDescent.jl) | the lasso and its paths; the group, square-root, scaled and heteroscedastic lasso; varying-coefficient models |
+| [HighDimensionalModels.jl](https://github.com/mlakolar/HighDimensionalModels.jl) | the lasso and its paths; the group, square-root, scaled and heteroscedastic lasso; varying-coefficient models |
 | [CovarianceSelection.jl](https://github.com/mlakolar/CovarianceSelection.jl) | Gaussian graphical models: the graphical lasso, CLIME and ACLIME, precision matrices by the scaled lasso, the fused graphical lasso, and the difference of two precision matrices |
 | **DiffPrecTest.jl** (this package) | confidence intervals and tests for the difference of two precision matrices |
 | [ProximalSolvers.jl](https://github.com/mlakolar/ProximalSolvers.jl) | the solvers: coordinate descent with penalty paths, screening and active sets; proximal gradient methods, proximal Newton and ADMM |
@@ -53,8 +53,8 @@ res.p .+ [-1.96, 1.96] .* res.std
 
 # simultaneous 95% confidence intervals for the entries of the lower triangle of Δ;
 # the off-diagonal entries are multiplied by √2
-straps, = bootstrap(X, Y; bootSamples=500)
-CI = simulCIstudentized(straps, 0.95)
+straps, = bootstrap(X, Y; boot_samples=500)
+CI = simul_ci_studentized(straps, 0.95)
 ```
 
 `Distributions` also exports `estimate`; when both packages are loaded, call
@@ -68,7 +68,40 @@ coordinate descent of [ProximalSolvers.jl](https://github.com/mlakolar/ProximalS
 on losses of [ProximalBase.jl](https://github.com/mlakolar/ProximalBase.jl):
 the direct difference loss of [CovarianceSelection.jl](https://github.com/mlakolar/CovarianceSelection.jl)
 and the inverse Hessian losses are its `KronQuadratic`. The functions of the
-two stages (`diffEstimation`, `invQSymHessian`, `invAsymHessianEstimation`,
-`reducedDiffEstimation`, `invHessianReduced`) take the solver options as a
+two stages (`diff_estimation`, `inv_q_sym_hessian`, `inv_asym_hessian_estimation`,
+`reduced_diff_estimation`, `inv_hessian_reduced`) take the solver options as a
 ProximalSolvers `CDSolver`; so are the node-wise lasso regressions of
 `SeparateNormal`.
+
+## Naming migration
+
+Types retain `UpperCamelCase`; descriptive functions, fields and keyword
+arguments use `snake_case`. Mathematical identifiers remain available.
+
+| Previous spelling | Canonical spelling |
+|---|---|
+| `diffEstimation` | `diff_estimation` |
+| `invAsymHessianEstimation`, `invQSymHessian`, `invHessianReduced` | `inv_asym_hessian_estimation`, `inv_q_sym_hessian`, `inv_hessian_reduced` |
+| `supportEstimate` | `support_estimate` |
+| `simulCI`, `simulCIstudentized` | `simul_ci`, `simul_ci_studentized` |
+| `computeSimulationResult` | `compute_simulation_result` |
+| `bootSamples`, `estimSupport` | `boot_samples`, `estim_support` |
+| `SimulationResult.lenCoverage` | `SimulationResult.len_coverage` |
+
+Previous public spellings are deprecated aliases for a transition period.
+Supplying both spellings of a keyword raises an error. Package versions are
+unchanged. Active environments use sibling master checkouts of
+CovarianceSelection, ProximalBase and ProximalSolvers through local sources.
+The pinned `benchmark/compare/old` environment remains a historical baseline.
+
+## Development tests
+
+From the repository root, run:
+
+```sh
+julia scripts/test_master.jl
+```
+
+The script prepares an isolated test environment using dependency master
+checkouts and test extras on Julia 1.10 and newer. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the naming policy and environment setup.

@@ -19,7 +19,7 @@ using PrecompileTools: @setup_workload, @compile_workload
     estimate(AsymmetricNormal(), X, Y, 2, 1)
     estimate(SeparateNormal(), X, Y, 2, 1)
     estimate(ReducedNormal(), X, Y, tril_index(p, 2, 1))
-    straps, = bootstrap(X, Y; bootSamples = 2)
-    simulCIstudentized(straps, 0.95)
+    straps, = bootstrap(X, Y; boot_samples = 2)
+    simul_ci_studentized(straps, 0.95)
   end
 end

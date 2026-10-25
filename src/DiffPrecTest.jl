@@ -8,8 +8,8 @@ independent samples `X` (`nx × p`) and `Y` (`ny × p`):
   [`SymmetricNormal`](@ref), [`AsymmetricNormal`](@ref),
   [`ReducedNormal`](@ref), [`SeparateNormal`](@ref) and the oracle variants);
 * simultaneous confidence intervals for all entries by the bootstrap
-  ([`bootstrap`](@ref), [`simulCI`](@ref), [`simulCIstudentized`](@ref));
-* support recovery ([`supportEstimate`](@ref)).
+  ([`bootstrap`](@ref), [`simul_ci`](@ref), [`simul_ci_studentized`](@ref));
+* support recovery ([`support_estimate`](@ref)).
 """
 module DiffPrecTest
 
@@ -18,6 +18,18 @@ using ProximalBase, CovarianceSelection
 using ProximalSolvers: ProximalSolvers, CDSolver, cdmodel, solve!, solve_path
 using Random
 using SpecialFunctions: erfcinv
+
+# Canonical and deprecated keywords share one implementation; reject an
+# ambiguous call instead of silently choosing one spelling.
+function _deprecated_keyword(value, legacy, canonical::Symbol, old::Symbol, default)
+  if legacy !== nothing
+    value === nothing || throw(ArgumentError("pass $canonical or $old, not both"))
+    Base.depwarn("keyword $old is deprecated; use $canonical.", old)
+    return legacy
+  end
+  value === nothing ? default : value
+end
+
 
 export
   DiffPrecResultBoot,
@@ -37,22 +49,22 @@ export
   estimate,
   compute,
   variance,
-  computeSimulationResult,
+  compute_simulation_result,
 
   # first and second stage functions
-  diffEstimation, invAsymHessianEstimation, invQSymHessian, invHessianReduced,
+  diff_estimation, inv_asym_hessian_estimation, inv_q_sym_hessian, inv_hessian_reduced,
 
   # support estimation
   ANTSupport,
   BootStdSupport,
   BootMaxSupport,
   DTraceValidationSupport,
-  supportEstimate,
+  support_estimate,
 
   # bootstrap
   BootstrapEstimates,
   bootstrap,
-  simulCI, simulCIstudentized
+  simul_ci, simul_ci_studentized
 
 
 
@@ -101,7 +113,7 @@ struct SymmetricOracleNormal <: DiffPrecMethod end
     AsymmetricNormal()
 
 Like [`SymmetricNormal`](@ref), but the second stage estimates a row of the
-inverse of the asymmetric Hessian `Σy ⊗ Σx` ([`invAsymHessianEstimation`](@ref))
+inverse of the asymmetric Hessian `Σy ⊗ Σx` ([`inv_asym_hessian_estimation`](@ref))
 and the refit uses [`AsymmetricOracleNormal`](@ref).
 """
 struct AsymmetricNormal <: DiffPrecMethod end
@@ -112,9 +124,9 @@ struct AsymmetricNormal <: DiffPrecMethod end
 The three stage procedure for one entry of `Δ`:
 
 1. estimate `Δ` by the weighted ℓ1 penalized direct difference estimator
-   ([`diffEstimation`](@ref));
+   ([`diff_estimation`](@ref));
 2. estimate the row of the inverse of the Hessian `(Σx ⊗ Σy + Σy ⊗ Σx) / 2`
-   that belongs to the entry ([`invQSymHessian`](@ref));
+   that belongs to the entry ([`inv_q_sym_hessian`](@ref));
 3. refit on the union of the two supports ([`SymmetricOracleNormal`](@ref)).
 
 See [`estimate`](@ref).
@@ -151,8 +163,8 @@ struct DecorrelatedScoreOracleNormal <: DiffPrecMethod end
     ReducedNormal()
 
 The procedure of [`SymmetricNormal`](@ref) in the half-vectorized
-parametrization `svec(Δ)` of a symmetric `Δ` ([`reducedDiffEstimation`](@ref),
-[`invHessianReduced`](@ref), [`ReducedOracleNormal`](@ref)). See
+parametrization `svec(Δ)` of a symmetric `Δ` ([`reduced_diff_estimation`](@ref),
+[`inv_hessian_reduced`](@ref), [`ReducedOracleNormal`](@ref)). See
 [`estimate`](@ref).
 """
 struct ReducedNormal <: DiffPrecMethod end
@@ -195,14 +207,14 @@ end
     SimulationResult
 
 Summary of repeated estimates of one entry of `Δ` returned by
-[`computeSimulationResult`](@ref): `bias`, `coverage` and average length
-`lenCoverage` of the confidence intervals, and the mean `p_mean` and variance
+[`compute_simulation_result`](@ref): `bias`, `coverage` and average length
+`len_coverage` of the confidence intervals, and the mean `p_mean` and variance
 `p_var` of the estimates.
 """
 struct SimulationResult
   bias::Float64
   coverage::Float64
-  lenCoverage::Float64
+  len_coverage::Float64
   p_mean::Float64
   p_var::Float64
 end
@@ -216,11 +228,11 @@ include("skron.jl")
 include("ustats.jl")
 include("support.jl")
 include("variance.jl")
-include("diffEstimation.jl")
-include("invHessianEstimation.jl")
+include("diff_estimation.jl")
+include("inv_hessian_estimation.jl")
 include("util.jl")
 include("bootstrap.jl")
-include("reducedDiffEstim.jl")
+include("reduced_diff_estim.jl")
 
 
 ##############################
@@ -234,18 +246,18 @@ include("reducedDiffEstim.jl")
 
 Estimate the entry `Δ[row, col]` of `Δ = Ωx - Ωy` from the samples `X` and `Y`
 with `method` one of [`SymmetricNormal`](@ref) or [`AsymmetricNormal`](@ref).
-Returns `(res, Δ, suppΔ, ω, suppω, indS)`: the [`DiffPrecResultNormal`](@ref)
+Returns `(res, Δ, suppΔ, ω, suppω, ind_s)`: the [`DiffPrecResultNormal`](@ref)
 `res`, the first stage estimate `Δ` and its support `suppΔ`, the second stage
 estimate `ω` and its support `suppω` (both supports as `p × p` `BitMatrix`),
-and the linear indices `indS` of the refitted entries.
+and the linear indices `ind_s` of the refitted entries.
 
 The sample covariances `Sx = X'X/nx`, `Sy = Y'Y/ny` and the first and second
 stage estimates are computed unless given; when estimating several entries,
 pass the first stage results of the first call to the later ones.
 
-    estimate(method, X, Y, indElem; Sx, Sy, H, Δ, suppΔ, ω, suppω)
+    estimate(method, X, Y, ind_elem; Sx, Sy, H, Δ, suppΔ, ω, suppω)
 
-The same with `method = ReducedNormal()` for the entry with index `indElem` in
+The same with `method = ReducedNormal()` for the entry with index `ind_elem` in
 the lower triangle (see `ProximalBase.tril_index`). Here `Δ` and `ω`
 are vectors of length `p(p+1)/2` with supports `suppΔ` and `suppω` given as
 `BitVector`s.
@@ -254,19 +266,19 @@ are vectors of length `p(p+1)/2` with supports `suppΔ` and `suppω` given as
 
 Estimator of Xia, Cai and Cai (2015). Returns a [`DiffPrecResultNormal`](@ref).
 
-    estimate(method, Sx, Sy, X, Y, row, col, indS)
+    estimate(method, Sx, Sy, X, Y, row, col, ind_s)
 
-Refit on the support `indS`, given as linear indices into a `p × p` matrix,
+Refit on the support `ind_s`, given as linear indices into a `p × p` matrix,
 with `method` one of [`SymmetricOracleNormal`](@ref),
 [`AsymmetricOracleNormal`](@ref) (returning a [`DiffPrecResultNormal`](@ref)),
 [`SymmetricOracleBoot`](@ref) or [`AsymmetricOracleBoot`](@ref) (returning a
-[`DiffPrecResultBoot`](@ref); keyword arguments `bootSamples=1000` and
+[`DiffPrecResultBoot`](@ref); keyword arguments `boot_samples=1000` and
 `rng=Random.default_rng()`). The entries `(row, col)` and `(col, row)` are moved
-to the front of `indS`, which is modified.
+to the front of `ind_s`, which is modified.
 
-    estimate(ReducedOracleNormal(), Sx, Sy, X, Y, indElem, indS)
+    estimate(ReducedOracleNormal(), Sx, Sy, X, Y, ind_elem, ind_s)
 
-Refit on the support `indS`, given as indices into `svec(Δ)`.
+Refit on the support `ind_s`, given as indices into `svec(Δ)`.
 
     estimate(DecorrelatedScoreOracleNormal(), Sx, Sy, X, Y, row, col, ω, indω, Δn, indΔn)
 
@@ -304,28 +316,28 @@ function estimate(::SymmetricNormal, X, Y, row, col;
   end
 
   # first stage
-  λ = _penaltyLevel(p)
+  λ = _penalty_level(p)
   if Δ === nothing && suppΔ === nothing
-    Δ = diffEstimation(Sx, Sy, X, Y, λ)
-    suppΔ = getSupport(Δ)
+    Δ = diff_estimation(Sx, Sy, X, Y, λ)
+    suppΔ = get_support(Δ)
   end
   if suppΔ === nothing
-    suppΔ = getSupport(Δ)
+    suppΔ = get_support(Δ)
   end
 
   # second stage
   if ω === nothing && suppω === nothing
     j = tril_index(p, row, col)
-    ω = invQSymHessian(Sx, Sy, j, X, Y, λ)
-    suppω = getSupport(ω, p)
+    ω = inv_q_sym_hessian(Sx, Sy, j, X, Y, λ)
+    suppω = get_support(ω, p)
   end
   if suppω === nothing
-    suppω = getSupport(ω, p)
+    suppω = get_support(ω, p)
   end
 
   # refit stage
-  indS = getLinearSupport(row, col, suppΔ, suppω)
-  estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS), Δ, suppΔ, ω, suppω, indS
+  ind_s = get_linear_support(row, col, suppΔ, suppω)
+  estimate(SymmetricOracleNormal(), Sx, Sy, X, Y, row, col, ind_s), Δ, suppΔ, ω, suppω, ind_s
 end
 
 
@@ -357,27 +369,27 @@ function estimate(::AsymmetricNormal, X, Y, row, col;
   end
 
   # first stage
-  λ = _penaltyLevel(p)
+  λ = _penalty_level(p)
   if Δ === nothing && suppΔ === nothing
-      Δ = diffEstimation(Sx, Sy, X, Y, λ)
-      suppΔ = getSupport(Δ)
+      Δ = diff_estimation(Sx, Sy, X, Y, λ)
+      suppΔ = get_support(Δ)
   end
   if suppΔ === nothing
-      suppΔ = getSupport(Δ)
+      suppΔ = get_support(Δ)
   end
 
   # second stage
   if ω === nothing && suppω === nothing
-      ω = invAsymHessianEstimation(Sx, Sy, row, col, X, Y, λ)
-      suppω = getSupport(ω, p)
+      ω = inv_asym_hessian_estimation(Sx, Sy, row, col, X, Y, λ)
+      suppω = get_support(ω, p)
   end
   if suppω === nothing
-      suppω = getSupport(ω, p)
+      suppω = get_support(ω, p)
   end
 
   # refit stage
-  indS = getLinearSupport(row, col, suppΔ, suppω)
-  estimate(AsymmetricOracleNormal(), Sx, Sy, X, Y, row, col, indS), Δ, suppΔ, ω, suppω, indS
+  ind_s = get_linear_support(row, col, suppΔ, suppω)
+  estimate(AsymmetricOracleNormal(), Sx, Sy, X, Y, row, col, ind_s), Δ, suppΔ, ω, suppω, ind_s
 end
 
 
@@ -457,7 +469,7 @@ end
 ####################################
 
 
-# indS --- coordinates for the nonzero element of the true Δ (LinearIndices)
+# ind_s --- coordinates for the nonzero element of the true Δ (LinearIndices)
 function estimate(::AsymmetricOracleBoot,
     Sx::Symmetric,
     Sy::Symmetric,
@@ -465,28 +477,29 @@ function estimate(::AsymmetricOracleBoot,
     Y,
     row,
     col,
-    indS::Vector{Int64};
-    bootSamples::Int64=1000,
+    ind_s::Vector{Int64};
+    boot_samples=nothing, bootSamples=nothing,
     rng::AbstractRNG=Random.default_rng()
     )
+  boot_samples = _deprecated_keyword(boot_samples, bootSamples, :boot_samples, :bootSamples, 1000)
 
   nx, p = size(X)
   ny    = size(Y, 1)
 
-  makeFirst!(indS, p, row, col)
+  make_first!(ind_s, p, row, col)
 
-  A = kron_sub(Sy, Sx, indS, indS)
-  Δ = A \ (Sy[indS] - Sx[indS])
+  A = kron_sub(Sy, Sx, ind_s, ind_s)
+  Δ = A \ (Sy[ind_s] - Sx[ind_s])
   Δab = row == col ? Δ[1] : ( Δ[1] + Δ[2] ) / 2.
 
-  boot_est = zeros(Float64, bootSamples)
-  for b=1:bootSamples
-     bX_ind = rand(rng, 1:nx, nx)
-     bY_ind = rand(rng, 1:ny, ny)
-     bSx = cov(X[bX_ind, :])
-     bSy = cov(Y[bY_ind, :])
-     kron_sub!(A, bSy, bSx, indS, indS)
-     Δb = A \ (bSy[indS] - bSx[indS])
+  boot_est = zeros(Float64, boot_samples)
+  for b=1:boot_samples
+     b_x_ind = rand(rng, 1:nx, nx)
+     b_y_ind = rand(rng, 1:ny, ny)
+     b_sx = cov(X[b_x_ind, :])
+     b_sy = cov(Y[b_y_ind, :])
+     kron_sub!(A, b_sy, b_sx, ind_s, ind_s)
+     Δb = A \ (b_sy[ind_s] - b_sx[ind_s])
      boot_est[b] = row == col ? Δb[1] : ( Δb[1] + Δb[2] ) / 2.
   end
 
@@ -494,7 +507,7 @@ function estimate(::AsymmetricOracleBoot,
 end
 
 
-# indS --- coordinates for the nonzero element of the true Δ (LinearIndices)
+# ind_s --- coordinates for the nonzero element of the true Δ (LinearIndices)
 function estimate(::SymmetricOracleBoot,
     Sx::Symmetric,
     Sy::Symmetric,
@@ -502,27 +515,28 @@ function estimate(::SymmetricOracleBoot,
     Y,
     row,
     col,
-    indS::Vector{Int64};
-    bootSamples::Int64=1000,
+    ind_s::Vector{Int64};
+    boot_samples=nothing, bootSamples=nothing,
     rng::AbstractRNG=Random.default_rng()
     )
+  boot_samples = _deprecated_keyword(boot_samples, bootSamples, :boot_samples, :bootSamples, 1000)
 
   nx, p = size(X)
   ny    = size(Y, 1)
 
-  makeFirst!(indS, p, row, col)
+  make_first!(ind_s, p, row, col)
 
-  C = skron_sub(Sx, Sy, indS, indS)
-  Δab = (C \ (Sy[indS] - Sx[indS]))[1]
+  C = skron_sub(Sx, Sy, ind_s, ind_s)
+  Δab = (C \ (Sy[ind_s] - Sx[ind_s]))[1]
 
-  boot_est = zeros(Float64, bootSamples)
-  for b=1:bootSamples
-     bX_ind = rand(rng, 1:nx, nx)
-     bY_ind = rand(rng, 1:ny, ny)
-     bSx = cov(X[bX_ind, :])
-     bSy = cov(Y[bY_ind, :])
-     skron_sub!(C, bSx, bSy, indS, indS)
-     boot_est[b] = (C \ (bSy[indS] - bSx[indS]))[1]
+  boot_est = zeros(Float64, boot_samples)
+  for b=1:boot_samples
+     b_x_ind = rand(rng, 1:nx, nx)
+     b_y_ind = rand(rng, 1:ny, ny)
+     b_sx = cov(X[b_x_ind, :])
+     b_sy = cov(Y[b_y_ind, :])
+     skron_sub!(C, b_sx, b_sy, ind_s, ind_s)
+     boot_est[b] = (C \ (b_sy[ind_s] - b_sx[ind_s]))[1]
   end
 
   DiffPrecResultBoot(Δab, boot_est)
@@ -540,22 +554,22 @@ function estimate(
     Y,
     row,
     col,
-    indS::Vector{Int64}
+    ind_s::Vector{Int64}
     )
 
   nx, p = size(X)
   ny    = size(Y, 1)
 
-  makeFirst!(indS, p, row, col)
+  make_first!(ind_s, p, row, col)
 
-  A = kron_sub(Sy, Sx, indS, indS)
-  Δ = A \ (Sy[indS] - Sx[indS])
+  A = kron_sub(Sy, Sx, ind_s, ind_s)
+  Δ = A \ (Sy[ind_s] - Sx[ind_s])
 
-  tmp = zeros(length(indS))
+  tmp = zeros(length(ind_s))
   tmp[1] = 1.
   ω = A \ tmp
 
-  v = variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, indS, Δ, indS)
+  v = variance(AsymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind_s, Δ, ind_s)
   DiffPrecResultNormal(Δ[1], sqrt(v))
 end
 
@@ -572,20 +586,20 @@ function estimate(
     Y,
     row,
     col,
-    indS::Vector{Int64}
+    ind_s::Vector{Int64}
     )
 
   nx, p = size(X)
   ny    = size(Y, 1)
 
-  makeFirst!(indS, p, row, col)
-  C = skron_sub(Sx, Sy, indS, indS)
+  make_first!(ind_s, p, row, col)
+  C = skron_sub(Sx, Sy, ind_s, ind_s)
 
-  tmp = zeros(length(indS))
+  tmp = zeros(length(ind_s))
   tmp[1] = 1.
   ω = C \ tmp
-  Δ = C \ (Sy[indS] - Sx[indS])
-  v = variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, indS, Δ, indS)
+  Δ = C \ (Sy[ind_s] - Sx[ind_s])
+  v = variance(SymmetricOracleNormal(), Sx, Sy, X, Y, ω, ind_s, Δ, ind_s)
 
   DiffPrecResultNormal(Δ[1], sqrt(v))
 end
@@ -613,7 +627,7 @@ function estimate(
   v = 0.
   for ci=1:length(indΔn)
       for ri=1:length(indω)
-          @inbounds v += _getElemSKron(Sx, Sy, indω[ri], indΔn[ci]) * ω[ri] * Δn[ci]
+          @inbounds v += _get_elem_skron(Sx, Sy, indω[ri], indΔn[ci]) * ω[ri] * Δn[ci]
       end
   end
   for ri=1:length(indω)
@@ -623,13 +637,13 @@ function estimate(
   if row == col
       ind = (col-1)*p + row
       for ri=1:length(indω)
-          @inbounds a += ω[ri] * _getElemSKron(Sx, Sy, indω[ri], ind)
+          @inbounds a += ω[ri] * _get_elem_skron(Sx, Sy, indω[ri], ind)
       end
   else
       ind1 = (col-1)*p + row
       ind2 = (row-1)*p + col
       for ri=1:length(indω)
-          @inbounds a += ω[ri] * (_getElemSKron(Sx, Sy, indω[ri], ind1) + _getElemSKron(Sx, Sy, indω[ri], ind2))
+          @inbounds a += ω[ri] * (_get_elem_skron(Sx, Sy, indω[ri], ind1) + _get_elem_skron(Sx, Sy, indω[ri], ind2))
       end
   end
   Δab = -v / a
@@ -646,6 +660,8 @@ function estimate(
 
   DiffPrecResultNormal(Δab, sqrt(v))
 end
+
+include("deprecated.jl")
 
 include("precompile.jl")
 

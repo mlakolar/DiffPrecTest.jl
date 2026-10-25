@@ -57,7 +57,7 @@ Sy = Symmetric( Y'Y / n )
 # oracle supports: Δ = 0, so every entry is refitted on its own
 eS_init = [Int64[] for j=1:div((p + 1)*p, 2)]
 
-@time boot_res, eS = bootstrap(X, Y; estimSupport=eS_init)
+@time boot_res, e_s = bootstrap(X, Y; estim_support=eS_init)
 
 
 @save "$(dir)/res_$(ip)_$(rep).jld2" boot_res

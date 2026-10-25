@@ -27,7 +27,7 @@ function variance(
     t = 0.
     for ci=1:length(indΔ)
         for ri=1:length(indω)
-            @inbounds t += _getElemSKron(Sx, Sy, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+            @inbounds t += _get_elem_skron(Sx, Sy, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
         end
     end
     for ri=1:length(indω)
@@ -39,7 +39,7 @@ function variance(
         v = 0.
         for ci=1:length(indΔ)
             for ri=1:length(indω)
-                @inbounds v += _getElemSKron(Sy, view(X, k, :), indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+                @inbounds v += _get_elem_skron(Sy, view(X, k, :), indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
             end
         end
         for ri=1:length(indω)
@@ -54,7 +54,7 @@ function variance(
         v = 0.
         for ci=1:length(indΔ)
             for ri=1:length(indω)
-                @inbounds v += _getElemSKron(Sx, view(Y, k, :), indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+                @inbounds v += _get_elem_skron(Sx, view(Y, k, :), indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
             end
         end
         for ri=1:length(indω)
@@ -104,7 +104,7 @@ function variance(
     end
   end
   for ri=1:length(indω)
-    @inbounds t -= ω[ri] * (svec(Sy, indω[ri]) - svec(Sx, indω[ri]))     
+    @inbounds t -= ω[ri] * (svec(Sy, indω[ri]) - svec(Sx, indω[ri]))
   end
 
   # the entries (row, col) of the coordinates, computed once for the loops below
@@ -177,7 +177,7 @@ function variance(
     t = 0.
     for ci=1:length(indΔ)
         for ri=1:length(indω)
-            @inbounds t += _getElemKron(Sy, Sx, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+            @inbounds t += _get_elem_kron(Sy, Sx, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
         end
     end
     for ri=1:length(indω)
@@ -189,7 +189,7 @@ function variance(
         v = 0.
         for ci=1:length(indΔ)
             for ri=1:length(indω)
-                @inbounds v += _getElemKron(Sy, view(X, k, :), indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+                @inbounds v += _get_elem_kron(Sy, view(X, k, :), indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
             end
         end
         for ri=1:length(indω)
@@ -204,7 +204,7 @@ function variance(
         v = 0.
         for ci=1:length(indΔ)
             for ri=1:length(indω)
-                @inbounds v += _getElemKron(view(Y, k, :), Sx, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
+                @inbounds v += _get_elem_kron(view(Y, k, :), Sx, indω[ri], indΔ[ci]) * ω[ri] * Δ[ci]
             end
         end
         for ri=1:length(indω)

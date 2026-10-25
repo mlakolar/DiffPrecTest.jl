@@ -1,6 +1,6 @@
 # Two Gaussian samples whose precision matrices Ωx and Ωy = Ωx - Δ differ by a
 # tridiagonal Δ. Returns X, Y and the true difference.
-function generateData(p, n)
+function generate_data(p, n)
   # generate model
   Ωx = Matrix{Float64}(I, p, p)
   for l=1:p-1

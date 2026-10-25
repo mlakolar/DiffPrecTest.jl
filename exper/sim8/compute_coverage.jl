@@ -14,5 +14,5 @@ res = load(fName, "results")
 # the intervals cover Δ = 0 when every one of them contains 0
 covers(CI) = all(CI[:, 1] .<= 0 .<= CI[:, 2])
 
-@show mean(covers(simulCI(r, alpha)) for r in res)
-@show mean(covers(simulCIstudentized(r, alpha)) for r in res)
+@show mean(covers(simul_ci(r, alpha)) for r in res)
+@show mean(covers(simul_ci_studentized(r, alpha)) for r in res)

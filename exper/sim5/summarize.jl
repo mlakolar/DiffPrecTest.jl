@@ -38,8 +38,8 @@ TPR_tr = zeros(NUM_REP, numΛ)
 dtrace = DataFrame(selection=String[], rep=Int[], tpr=Float64[], fpr=Float64[], precision=Float64[])
 
 for (rep, f) in enumerate(files)
-    eΔNormal, eΔBoot, eΔDTr, i2, iInf = jldopen(joinpath(dir, f), "r") do file
-        read(file, "eΔNormal"), read(file, "eΔBoot"), read(file, "eΔDTr"), read(file, "i2"), read(file, "iInf")
+    eΔNormal, eΔBoot, eΔDTr, i2, i_inf = jldopen(joinpath(dir, f), "r") do file
+        read(file, "eΔNormal"), read(file, "eΔBoot"), read(file, "eΔDTr"), read(file, "i2"), read(file, "i_inf")
     end
 
     for j=1:numτ
@@ -58,7 +58,7 @@ for (rep, f) in enumerate(files)
         TPR_tr[rep, j] = tpr(cm)
     end
 
-    for (selection, i) in (("frobenius", i2), ("max", iInf))
+    for (selection, i) in (("frobenius", i2), ("max", i_inf))
         cm = getConfusionMatrix(Δ, eΔDTr[i])
         push!(dtrace, (selection, rep, tpr(cm), fpr(cm), precision(cm)))
     end

@@ -20,17 +20,17 @@ the true support (`O-...`).
 
 ## Setup
 
-With Julia 1.11 or later:
+From the repository root, prepare the experiment environment on Julia 1.10
+or newer:
 
 ```sh
-julia --project=. -e 'using Pkg; Pkg.instantiate()'
+julia scripts/instantiate.jl exper
 ```
 
-`Project.toml` takes DiffPrecTest from this repository, and CovarianceSelection,
-ProximalSolvers and ProximalBase from their masters on GitHub, until they are
-registered. Julia 1.10 ignores these sources; there, run
-`using Pkg; Pkg.develop(path=".."); Pkg.add([PackageSpec(url="https://github.com/mlakolar/ProximalBase.jl", rev="master"), PackageSpec(url="https://github.com/mlakolar/ProximalSolvers.jl", rev="master"), PackageSpec(url="https://github.com/mlakolar/CovarianceSelection.jl", rev="master")])`
-once instead.
+The bootstrap loads DiffPrecTest from this repository and CovarianceSelection,
+ProximalSolvers and ProximalBase from sibling master checkouts, including their
+transitive workspace dependencies. Existing checkouts are never reset or
+silently updated.
 
 ## Running
 

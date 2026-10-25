@@ -15,3 +15,9 @@
 /exper/sim*/*.pdf
 /benchmark/compare/*/Manifest*.toml
 /benchmark/compare/results/
+
+# Generated master dependency test environments
+.master-test-env/
+
+# Local Julia-minor environments are regenerated from master checkouts
+/Manifest-v*.toml

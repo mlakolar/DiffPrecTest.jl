@@ -24,7 +24,7 @@ function Q(p::Int)
   end
   Q
 end
-  
+
 function Qt(p::Int)
   _c = 1. / sqrt(2.)
   rp = div((p+1)*p,2)
@@ -61,10 +61,10 @@ end
   o2 = zeros( num_row_reduced, num_row_reduced )
   for ri=1:num_row_reduced
       for ci=1:num_row_reduced
-          o2[ri, ci] = skron(x, y, ri, ci) 
+          o2[ri, ci] = skron(x, y, ri, ci)
       end
   end
- 
+
   @test o2 ≈ Q(p) * ( kron(x*x', y*y') + kron(y*y', x*x') ) * Qt(p) / 2.
 
   @test skron(x, y, 1:4, 3:6) ≈ (Q(p) * ( kron(x*x', y*y') + kron(y*y', x*x') ) * Qt(p) / 2.)[1:4, 3:6]
@@ -84,7 +84,7 @@ end
   J = 4:7
   @test skron(Sx, Sy, I, J) ≈ (Q(p) * ( kron(Sx, Sy) + kron(Sy, Sx) ) * Qt(p) / 2.)[I, J]
 
-  I = [2, 5, 7, 8]    
+  I = [2, 5, 7, 8]
   @test skron(Sx, Sy, I) ≈ (Q(p) * ( kron(Sx, Sy) + kron(Sy, Sx) ) * Qt(p) / 2.)[I, I]
 
   I = 10:15
@@ -111,8 +111,8 @@ end
   I = 10:15
   @test svec(Sx, I) ≈ (Q(p) * vec( Sx ))[I]
 
-  I = [2, 5, 7, 8]    
-  @test svec(Sy, I) ≈ (Q(p) * vec( Sy ))[I]    
+  I = [2, 5, 7, 8]
+  @test svec(Sy, I) ≈ (Q(p) * vec( Sy ))[I]
 
   @test svec(view(X, 1, :), view(Y, 1, :), I) ≈ (Q(p) * kron(view(X, 1, :), view(Y, 1, :)))[I]
 end

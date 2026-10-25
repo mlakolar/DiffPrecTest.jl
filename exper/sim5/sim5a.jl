@@ -48,9 +48,9 @@ Sy = Symmetric( cov(Y) )
 Sxtest = Symmetric( cov(Xtest) )
 Sytest = Symmetric( cov(Ytest) )
 
-@time eS = DiffPrecTest.__initSupport(Sx, Sy, X, Y)
-@time eΔNormal, eΔNormalP, _ = supportEstimate(ANTSupport(), X, Y, τArr; estimSupport=eS)
-@time eΔBoot  , eΔBootP, _ = supportEstimate(BootStdSupport(), X, Y, τArr; estimSupport=eS)
+@time e_s = DiffPrecTest.__init_support(Sx, Sy, X, Y)
+@time eΔNormal, eΔNormalP, _ = support_estimate(ANTSupport(), X, Y, τArr; estim_support=e_s)
+@time eΔBoot  , eΔBootP, _ = support_estimate(BootStdSupport(), X, Y, τArr; estim_support=e_s)
 
 # compete method
 
@@ -58,6 +58,6 @@ maxλ = maximum( abs.(Sx - Sy) )
 minλ = maxλ * 0.04
 Λarr = exp.(range(log(maxλ), log(minλ), length=50))
 
-eΔDTr, i2, iInf, loss2arr, lossInfarr = supportEstimate(DTraceValidationSupport(), Sx, Sy, Sxtest, Sytest, Λarr)
+eΔDTr, i2, i_inf, loss2arr, loss_infarr = support_estimate(DTraceValidationSupport(), Sx, Sy, Sxtest, Sytest, Λarr)
 
-@save "$(dir)/res_$(rep).jld2" eΔNormal eΔNormalP eΔBoot eΔBootP eS eΔDTr i2 iInf loss2arr lossInfarr
+@save "$(dir)/res_$(rep).jld2" eΔNormal eΔNormalP eΔBoot eΔBootP e_s eΔDTr i2 i_inf loss2arr loss_infarr

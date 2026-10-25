@@ -2,7 +2,7 @@
 
 
 # A = Sx⋅Δ⋅Sy
-function _computeVarElem(
+function _compute_var_elem(
     q, r,
     Sx, Sy, A,
     SxΔ, SyΔ,
@@ -100,7 +100,7 @@ end
 
 
 # the weights of the penalty on Δ as a p × p matrix, symmetric
-function _computeVar!(ω, Sx, Sy, X, Y, Δ::SymmetricSparseIterate)
+function _compute_var!(ω, Sx, Sy, X, Y, Δ::SymmetricSparseIterate)
     nx, p = size(X)
     ny    = size(Y, 1)
 
@@ -113,7 +113,7 @@ function _computeVar!(ω, Sx, Sy, X, Y, Δ::SymmetricSparseIterate)
 
     for col=1:p
         for row=col:p
-            ω[row, col] = ω[col, row] = sqrt(_computeVarElem(q, r, Sx, Sy, A, SxΔ, SyΔ, X, Y, row, col))
+            ω[row, col] = ω[col, row] = sqrt(_compute_var_elem(q, r, Sx, Sy, A, SxΔ, SyΔ, X, Y, row, col))
         end
     end
     ω
@@ -122,7 +122,7 @@ end
 # The estimators of both stages solve twice: with the weights ω of the ℓ1
 # penalty computed by weights!(ω, x) at the starting point x, then, warm
 # started, with the weights recomputed at the first solution.
-function _twoStage!(x, f, λ, ω, weights!, method::CDSolver)
+function _two_stage!(x, f, λ, ω, weights!, method::CDSolver)
     m = cdmodel(f, x)
     for stage=1:2
         weights!(ω, x)
@@ -134,19 +134,19 @@ end
 
 
 """
-    diffEstimation(Sx, Sy, X, Y, λ, method=CDSolver())
+    diff_estimation(Sx, Sy, X, Y, λ, method=CDSolver())
 
 First stage of [`SymmetricNormal`](@ref) and [`AsymmetricNormal`](@ref):
 estimate `Δ = Ωx - Ωy` by minimizing the direct difference loss
-`tr(Sx⋅Δ⋅Sy⋅Δ)/2 - tr(Δ⋅(Sy - Sx))` (`CovarianceSelection.directDifferenceLoss`) plus a
+`tr(Sx⋅Δ⋅Sy⋅Δ)/2 - tr(Δ⋅(Sy - Sx))` (`CovarianceSelection.direct_difference_loss`) plus a
 weighted ℓ1 penalty with level `λ`, by ProximalSolvers' coordinate descent with
 the options `method`. The weights are standard errors of the gradient
 estimated from `X` and `Y`, computed at zero and again at the first solution.
 Returns a `SymmetricSparseIterate`.
 """
-function diffEstimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, method::CDSolver=CDSolver())
+function diff_estimation(Sx::Symmetric, Sy::Symmetric, X, Y, λ, method::CDSolver=CDSolver())
     p = size(Sx, 1)
     x = SymmetricSparseIterate(p)
     ω = zeros(p, p)
-    _twoStage!(x, directDifferenceLoss(Sx, Sy), λ, ω, (ω, x) -> _computeVar!(ω, Sx, Sy, X, Y, x), method)
+    _two_stage!(x, direct_difference_loss(Sx, Sy), λ, ω, (ω, x) -> _compute_var!(ω, Sx, Sy, X, Y, x), method)
 end
