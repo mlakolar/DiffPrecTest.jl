@@ -17,12 +17,12 @@ TYPE = re.compile(r'^\s*(?:mutable\s+)?(?:struct|abstract\s+type|primitive\s+typ
 def check(root):
     errors=[]
     types={m.group(1) for path in (root/'src').rglob('*.jl')
-           for line in path.read_text().splitlines() if (m := TYPE.match(line))}
-    types |= {m.group(1) for path in (root/'src').rglob('*.jl') for m in re.finditer(r'^\s*const\s+(\w+)\s*=',path.read_text(),re.M)}
+           for line in path.read_text(encoding="utf-8").splitlines() if (m := TYPE.match(line))}
+    types |= {m.group(1) for path in (root/'src').rglob('*.jl') for m in re.finditer(r'^\s*const\s+(\w+)\s*=',path.read_text(encoding="utf-8"),re.M)}
     for path in sorted((root/'src').rglob('*.jl')):
         if 'deprecated' in path.stem: continue
         in_doc=False; in_struct=False
-        lines=path.read_text().splitlines()
+        lines=path.read_text(encoding="utf-8").splitlines()
         for number,line in enumerate(lines,1):
             if line.count('"""') % 2: in_doc=not in_doc; continue
             if in_doc: continue
