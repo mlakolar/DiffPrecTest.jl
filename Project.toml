@@ -1,7 +1,7 @@
 name = "DiffPrecTest"
 uuid = "bb4bfe13-bfd7-5c6f-a2d2-8072376c6806"
-authors = ["Mladen Kolar <mkolar@chicagobooth.edu>"]
 version = "0.3.0"
+authors = ["Mladen Kolar <mkolar@chicagobooth.edu>"]
 
 [deps]
 CovarianceSelection = "fb9f034c-9bf8-4e47-a0a4-723273363029"
@@ -14,10 +14,14 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
-[sources]
-CovarianceSelection = {path = "../CovarianceSelection.jl"}
-ProximalBase = {path = "../ProximalBase.jl"}
-ProximalSolvers = {path = "../ProximalOPT.jl"}
+[sources.CovarianceSelection]
+path = "../CovarianceSelection.jl"
+
+[sources.ProximalBase]
+path = "../ProximalBase.jl"
+
+[sources.ProximalSolvers]
+path = "../ProximalOPT.jl"
 
 [compat]
 Aqua = "0.8"
@@ -27,7 +31,7 @@ JuMP = "1"
 LinearAlgebra = "1"
 PrecompileTools = "1"
 ProximalBase = "0.5"
-ProximalSolvers = "0.1"
+ProximalSolvers = "0.1, 0.2"
 Random = "1"
 SparseArrays = "1"
 SpecialFunctions = "2"
