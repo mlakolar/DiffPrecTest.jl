@@ -3,7 +3,7 @@ using Pkg, TOML
 
 const WORKSPACE_PACKAGES = Dict(
     "ProximalBase" => ("ProximalBase.jl", "ProximalBase.jl"),
-    "ProximalSolvers" => ("ProximalOPT.jl", "ProximalSolvers.jl"),
+    "ProximalSolvers" => ("ProximalSolvers.jl", "ProximalSolvers.jl"),
     "HighDimensionalModels" => ("HighDimensionalModels.jl", "HighDimensionalModels.jl"),
     "CovarianceSelection" => ("CovarianceSelection.jl", "CovarianceSelection.jl"),
     "DiffPrecTest" => ("DiffPrecTest.jl", "DiffPrecTest.jl"),

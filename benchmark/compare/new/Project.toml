@@ -14,11 +14,11 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 CovarianceSelection = {path = "../../../../CovarianceSelection.jl"}
 DiffPrecTest = {path = "../../.."}
 ProximalBase = {path = "../../../../ProximalBase.jl"}
-ProximalSolvers = {path = "../../../../ProximalOPT.jl"}
+ProximalSolvers = {path = "../../../../ProximalSolvers.jl"}
 
 [compat]
 CovarianceSelection = "0.1"
 DiffPrecTest = "0.3"
 ProximalBase = "0.5"
-ProximalSolvers = "0.1"
+ProximalSolvers = "0.3"
 julia = "1.10"

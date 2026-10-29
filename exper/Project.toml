@@ -20,7 +20,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 CovarianceSelection = {path = "../../CovarianceSelection.jl"}
 DiffPrecTest = {path = ".."}
 ProximalBase = {path = "../../ProximalBase.jl"}
-ProximalSolvers = {path = "../../ProximalOPT.jl"}
+ProximalSolvers = {path = "../../ProximalSolvers.jl"}
 
 [compat]
 CSV = "1"
@@ -33,6 +33,6 @@ LaTeXStrings = "1"
 LaTeXTabulars = "1"
 Plots = "1"
 ProximalBase = "0.5"
-ProximalSolvers = "0.1"
+ProximalSolvers = "0.3"
 StatsBase = "0.34"
 julia = "1.10"
